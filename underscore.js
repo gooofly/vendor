@@ -9,9 +9,11 @@
   // --------------
 
   // Establish the root object, `window` in the browser, or `exports` on the server.
+  // 创建根对象，在浏览器中为window，或者在node中为exports
   var root = this;
 
   // Save the previous value of the `_` variable.
+  // 用来保存"_"中原先的值（如果有的话）
   var previousUnderscore = root._;
 
   // Establish the object that gets returned to break out of a loop iteration.
@@ -21,6 +23,7 @@
   var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
 
   // Create quick reference variables for speed access to core prototypes.
+  // 创建js原生方法的快捷式
   var
     push             = ArrayProto.push,
     slice            = ArrayProto.slice,
