@@ -39,6 +39,7 @@
     nativeBind         = FuncProto.bind;
 
   // Create a safe reference to the Underscore object for use below.
+  // Underscore对象构造函数
   var _ = function(obj) {
     if (obj instanceof _) return obj;
     if (!(this instanceof _)) return new _(obj);
