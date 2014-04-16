@@ -8,19 +8,23 @@
 (function(root, factory) {
 
   // Set up Backbone appropriately for the environment. Start with AMD.
+  // 根据环境适当的配置Backbone
   if (typeof define === 'function' && define.amd) {
     define(['underscore', 'jquery', 'exports'], function(_, $, exports) {
       // Export global even in AMD case in case this script is loaded with
       // others that may still expect a global Backbone.
+      // 输出全局变量即使在AMD环境中，
       root.Backbone = factory(root, exports, _, $);
     });
 
   // Next for Node.js or CommonJS. jQuery may not be needed as a module.
+  // 在nodejs环境中，jQuery就不需要了
   } else if (typeof exports !== 'undefined') {
     var _ = require('underscore');
     factory(root, exports, _);
 
   // Finally, as a browser global.
+  // 浏览器环境中，及通过script标签手动引入的情况下
   } else {
     root.Backbone = factory(root, {}, root._, (root.jQuery || root.Zepto || root.ender || root.$));
   }
@@ -32,9 +36,11 @@
 
   // Save the previous value of the `Backbone` variable, so that it can be
   // restored later on, if `noConflict` is used.
+  // 定义变量，保存原来的Backbone的值
   var previousBackbone = root.Backbone;
 
   // Create local references to array methods we'll want to use later.
+  // 定义对常用数组方法的引用
   var array = [];
   var push = array.push;
   var slice = array.slice;
@@ -57,12 +63,15 @@
   // Turn on `emulateHTTP` to support legacy HTTP servers. Setting this option
   // will fake `"PATCH"`, `"PUT"` and `"DELETE"` requests via the `_method` parameter and
   // set a `X-Http-Method-Override` header.
+  // 打开 'emulateHTTP'(仿HTTP？)以支持老的HTTP服务。设置这个配置项会通过'_method'参数
+  // 模拟 'PATCH', 'PUT', 'DELETE'请求，并且设置一个 'X-Http-Method-Override'头
   Backbone.emulateHTTP = false;
 
   // Turn on `emulateJSON` to support legacy servers that can't deal with direct
   // `application/json` requests ... will encode the body as
   // `application/x-www-form-urlencoded` instead and will send the model in a
   // form param named `model`.
+  // 用来兼容老的、不支持JSON服务的环境
   Backbone.emulateJSON = false;
 
   // Backbone.Events
@@ -72,6 +81,8 @@
   // custom events. You may bind with `on` or remove with `off` callback
   // functions to an event; `trigger`-ing an event fires all callbacks in
   // succession.
+  // 这个模块可以被混入到任何其它的对象当中，使他们支持自定义事件。你可以通过on来
+  // 绑定事件，通过off来解除绑定。可以通过trigger方法来手动触发事件。
   //
   //     var object = {};
   //     _.extend(object, Backbone.Events);
@@ -82,8 +93,22 @@
 
     // Bind an event to a `callback` function. Passing `"all"` will bind
     // the callback to all events fired.
+    // 把一个回调函数绑定到事件上。事件名传入'all'会把回调函数绑定到所有事件上去
+    // note: 实际上绑定事件的方式就是创建一个以事件名为key的hash，如下结构：
+    // {
+    //    change: [
+    //      {
+    //        callback: callback,
+    //        context: context,
+    //        ctx: contenxt || this
+    //      },
+    //      ...
+    //    ],
+    //    blur: [...]
+    // }
     on: function(name, callback, context) {
-      if (!eventsApi(this, 'on', name, [callback, context]) || !callback) return this;
+      // 如果name是'change blur'或{change: callback}这种写法，或者callback为空则直接return
+      if (!eventsApi(this, 'on', name, [callback, context]) || !callback) return this; 
       this._events || (this._events = {});
       var events = this._events[name] || (this._events[name] = []);
       events.push({callback: callback, context: context, ctx: context || this});
@@ -174,10 +199,15 @@
   // Implement fancy features of the Events API such as multiple event
   // names `"change blur"` and jQuery-style event maps `{change: action}`
   // in terms of the existing API.
+  // 针对Events API多种不同的使用方式进行判断、处理。可能有如下写法
+  // 1. 'change'
+  // 2. 'change blur'
+  // 3. {change: callback}, {change: callback1, blur: callback2}
+  // 如果事件名为空，或者为第1种写法，则返回true，否则返回false
   var eventsApi = function(obj, action, name, rest) {
-    if (!name) return true;
+    if (!name) return true; // 如果name 参数为空
 
-    // Handle event maps.
+    // Handle event maps. 如果是第3种写法
     if (typeof name === 'object') {
       for (var key in name) {
         obj[action].apply(obj, [key, name[key]].concat(rest));
@@ -186,6 +216,7 @@
     }
 
     // Handle space separated event names.
+    // 如果是第2种写法
     if (eventSplitter.test(name)) {
       var names = name.split(eventSplitter);
       for (var i = 0, l = names.length; i < l; i++) {
