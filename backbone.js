@@ -117,6 +117,7 @@
 
     // Bind an event to only be triggered a single time. After the first time
     // the callback is invoked, it will be removed.
+    // 绑定一个只会被触发一次的事件监听器
     once: function(name, callback, context) {
       if (!eventsApi(this, 'once', name, [callback, context]) || !callback) return this;
       var self = this;
