@@ -95,7 +95,7 @@
     // the callback to all events fired.
     // 把一个回调函数绑定到事件上。事件名传入'all'会把回调函数绑定到所有事件上去
     // note: 实际上绑定事件的方式就是创建一个以事件名为key的hash，如下结构：
-    // {
+    // _events: {
     //    change: [
     //      {
     //        callback: callback,
@@ -107,11 +107,12 @@
     //    blur: [...]
     // }
     on: function(name, callback, context) {
-      // 如果name是'change blur'或{change: callback}这种写法，或者callback为空则直接return
+      // 如果name是'change blur'或{change: callback}这种写法，会在eventsApi里面循环调用on方法
+      // 如果callback为空则直接return
       if (!eventsApi(this, 'on', name, [callback, context]) || !callback) return this; 
       this._events || (this._events = {});
       var events = this._events[name] || (this._events[name] = []);
-      events.push({callback: callback, context: context, ctx: context || this});
+      events.push({callback: callback, context: context, ctx: context || this}); // context 和 ctx ？？
       return this;
     },
 
@@ -135,17 +136,20 @@
     // callbacks for all events.
     off: function(name, callback, context) {
       var retain, ev, events, names, i, l, j, k;
+      // 如果_events未定义，则说明还没有事件监听器被注册，直接返回
+      // 通过私有函数eventsApi对不同形式的参数进行处理
       if (!this._events || !eventsApi(this, 'off', name, [callback, context])) return this;
-      if (!name && !callback && !context) {
+      if (!name && !callback && !context) { // 如果没有传入任何参数，则直接删除_events对象，即删除所有已注册的事件监听器
         this._events = void 0;
         return this;
       }
+      // _.keys(this._events)用来取出_events对象里面的所有属性名称，ES5里面有个Object.keys方法作用一样
       names = name ? [name] : _.keys(this._events);
       for (i = 0, l = names.length; i < l; i++) {
         name = names[i];
         if (events = this._events[name]) {
-          this._events[name] = retain = [];
-          if (callback || context) {
+          this._events[name] = retain = [];  // 先清空数组
+          if (callback || context) { // 看是否提供了callback或context参数
             for (j = 0, k = events.length; j < k; j++) {
               ev = events[j];
               if ((callback && callback !== ev.callback && callback !== ev.callback._callback) ||
@@ -170,8 +174,8 @@
       var args = slice.call(arguments, 1);
       if (!eventsApi(this, 'trigger', name, args)) return this;
       var events = this._events[name];
-      var allEvents = this._events.all;
-      if (events) triggerEvents(events, args);
+      var allEvents = this._events.all; // Callbacks bound to the special "all" event will be triggered when any event occurs, 
+      if (events) triggerEvents(events, args); // 调用私有函数triggerEvents来调用事件监听函数
       if (allEvents) triggerEvents(allEvents, arguments);
       return this;
     },
@@ -203,7 +207,7 @@
   // 针对Events API多种不同的使用方式进行判断、处理。可能有如下写法
   // 1. 'change'
   // 2. 'change blur'
-  // 3. {change: callback}, {change: callback1, blur: callback2}
+  // 3. {change: callback1, blur: callback2}
   // 如果事件名为空，或者为第1种写法，则返回true，否则返回false
   var eventsApi = function(obj, action, name, rest) {
     if (!name) return true; // 如果name 参数为空
@@ -234,7 +238,9 @@
   // Backbone events have 3 arguments).
   var triggerEvents = function(events, args) {
     var ev, i = -1, l = events.length, a1 = args[0], a2 = args[1], a3 = args[2];
-    switch (args.length) {
+    // 虽然难以相信，但却是为了性能考虑。多数Backbone内部方法触发事件时会传3个参数，即会使用call（而非apply）。
+    // 按此推理，call的性能较apply要高。搜关键字 "call apply performance"， 貌似印证了这个说法 http://www.cnblogs.com/snandy/archive/2013/05/23/3091258.html
+    switch (args.length) { // 冗余换性能。
       case 0: while (++i < l) (ev = events[i]).callback.call(ev.ctx); return;
       case 1: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1); return;
       case 2: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1, a2); return;
