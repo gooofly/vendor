@@ -185,9 +185,9 @@
     stopListening: function(obj, name, callback) {
       var listeningTo = this._listeningTo;
       if (!listeningTo) return this;
-      var remove = !name && !callback;
-      if (!callback && typeof name === 'object') callback = this;
-      if (obj) (listeningTo = {})[obj._listenId] = obj;
+      var remove = !name && !callback; // 如果只有一个参数，则remove = true
+      if (!callback && typeof name === 'object') callback = this; // 不同形式参数处理
+      if (obj) (listeningTo = {})[obj._listenId] = obj; // 如果提供了obj参数，对obj进行处理；否则，移除所有
       for (var id in listeningTo) {
         obj = listeningTo[id];
         obj.off(name, callback, this);
@@ -254,13 +254,19 @@
   // Inversion-of-control versions of `on` and `once`. Tell *this* object to
   // listen to an event in another object ... keeping track of what it's
   // listening to.
+  // ObjectA.listenTo(ObjectB, name, callback);
+  // 这样写的效果为ObjectB.on(name, callback, ObjectA)，
+  // 相当于把事件监听器绑定到ObjectB上，context为ObjectA，比如数据视图的双向绑定
+  // view.listenTo(model, change, function() {...})
+  // 当model发生改变时，触发change事件，而callback是绑定在view上的，即能对view进行改变
   _.each(listenMethods, function(implementation, method) {
     Events[method] = function(obj, name, callback) {
+      // listeningTo & this._listeningTo用来放置目标Object，通过一个全局唯一的id索引
       var listeningTo = this._listeningTo || (this._listeningTo = {});
-      var id = obj._listenId || (obj._listenId = _.uniqueId('l'));
+      var id = obj._listenId || (obj._listenId = _.uniqueId('l')); // 为obj生成一个全局唯一的id
       listeningTo[id] = obj;
-      if (!callback && typeof name === 'object') callback = this;
-      obj[implementation](name, callback, this);
+      if (!callback && typeof name === 'object') callback = this; // 参数处理
+      obj[implementation](name, callback, this); // 注册事件监听器
       return this;
     };
   });
