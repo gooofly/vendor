@@ -282,10 +282,10 @@
   // Backbone.Model
   // --------------
 
-  // Backbone **Models** are the basic data object in the framework --
-  // frequently representing a row in a table in a database on your server.
-  // A discrete chunk of data and a bunch of useful, related methods for
-  // performing computations and transformations on that data.
+    // Backbone **Models** are the basic data object in the framework --
+    // frequently representing a row in a table in a database on your server.
+    // A discrete chunk of data and a bunch of useful, related methods for
+    // performing computations and transformations on that data.
 
   // Create a new model with the specified attributes. A client id (`cid`)
   // is automatically generated and assigned for you.
@@ -303,12 +303,15 @@
   };
 
   // Attach all inheritable methods to the Model prototype.
+  // 为Model原型对象添加方法、属性
   _.extend(Model.prototype, Events, {
 
     // A hash of attributes whose current and previous value differ.
+    // 用来保存改变值的hash
     changed: null,
 
     // The value returned during the last failed validation.
+    // validation验证错误时
     validationError: null,
 
     // The default name for the JSON `id` attribute is `"id"`. MongoDB and
@@ -320,28 +323,32 @@
     initialize: function(){},
 
     // Return a copy of the model's `attributes` object.
+    // 返回model的'attributes'对象
     toJSON: function(options) {
       return _.clone(this.attributes);
     },
 
     // Proxy `Backbone.sync` by default -- but override this if you need
     // custom syncing semantics for *this* particular model.
+    // 默认调用'Backbone.sync' -- 可覆写
     sync: function() {
       return Backbone.sync.apply(this, arguments);
     },
 
     // Get the value of an attribute.
+    // 取'attributes'中的属性值
     get: function(attr) {
       return this.attributes[attr];
     },
 
     // Get the HTML-escaped value of an attribute.
+    // 返回转义HTML字符后的属性
     escape: function(attr) {
       return _.escape(this.get(attr));
     },
 
-    // Returns `true` if the attribute contains a value that is not null
-    // or undefined.
+    // Returns `true` if the attribute contains a value that is not null or undefined.
+    // 如果**Model**中有该属性，返回true
     has: function(attr) {
       return this.get(attr) != null;
     },
@@ -349,11 +356,14 @@
     // Set a hash of model attributes on the object, firing `"change"`. This is
     // the core primitive operation of a model, updating the data and notifying
     // anyone who needs to know about the change in state. The heart of the beast.
+    // 给**model**设置属性，并且会触发'"change"'事件。这个是model的核心操作方法，更新数据，并通知
+    // 给需要的人知道改变的状态。The heart of the beast。
     set: function(key, val, options) {
       var attr, attrs, unset, changes, silent, changing, prev, current;
       if (key == null) return this;
 
       // Handle both `"key", value` and `{key: value}` -style arguments.
+      // set的参数支持不同的写法
       if (typeof key === 'object') {
         attrs = key;
         options = val;
@@ -364,6 +374,7 @@
       options || (options = {});
 
       // Run validation.
+      // 调用validation函数
       if (!this._validate(attrs, options)) return false;
 
       // Extract attributes and options.
@@ -373,7 +384,7 @@
       changing        = this._changing;
       this._changing  = true;
 
-      if (!changing) {
+      if (!changing) { // changing === this._changing === false，如果未changed，则备份原来的'attributes'
         this._previousAttributes = _.clone(this.attributes);
         this.changed = {};
       }
@@ -391,10 +402,10 @@
         } else {
           delete this.changed[attr];
         }
-        unset ? delete current[attr] : current[attr] = val;
+        unset ? delete current[attr] : current[attr] = val; // 如果配置了unset则删除属性，否则设置属性
       }
 
-      // Trigger all relevant attribute changes.
+      // Trigger all relevant attribute changes. 触发所有相关属性的'"change"'
       if (!silent) {
         if (changes.length) this._pending = options;
         for (var i = 0, l = changes.length; i < l; i++) {
@@ -419,11 +430,13 @@
 
     // Remove an attribute from the model, firing `"change"`. `unset` is a noop
     // if the attribute doesn't exist.
+    // 从**model**中移除属性，会触发'"change"'
     unset: function(attr, options) {
       return this.set(attr, void 0, _.extend({}, options, {unset: true}));
     },
 
     // Clear all attributes on the model, firing `"change"`.
+    // 清空model中的属性，会触发'"change"'
     clear: function(options) {
       var attrs = {};
       for (var key in this.attributes) attrs[key] = void 0;
@@ -432,6 +445,8 @@
 
     // Determine if the model has changed since the last `"change"` event.
     // If you specify an attribute name, determine if that attribute has changed.
+    // 检查**model**从上次'"change"'事件后，属性是否有改变。如果你指定了一个属性名，
+    // 那么就检查这个属性是否有改变。
     hasChanged: function(attr) {
       if (attr == null) return !_.isEmpty(this.changed);
       return _.has(this.changed, attr);
@@ -443,6 +458,9 @@
     // persisted to the server. Unset attributes will be set to undefined.
     // You can also pass an attributes object to diff against the model,
     // determining if there *would be* a change.
+    // 返回一个包含所有发生改变的属性的对象，如果没有属性改变，则返回false。
+    // 在决定哪部分的view需要升级add/or什么属性需要持久化到服务器时很有用。移除属性会使
+    // 属性变为undefined。你也可以传递一个包含属性的对象去和model的属性对比，决定是否有不同。
     changedAttributes: function(diff) {
       if (!diff) return this.hasChanged() ? _.clone(this.changed) : false;
       var val, changed = false;
@@ -456,6 +474,7 @@
 
     // Get the previous value of an attribute, recorded at the time the last
     // `"change"` event was fired.
+    // 返回最后一次'"change"'事件触发时的attributes[attr]
     previous: function(attr) {
       if (attr == null || !this._previousAttributes) return null;
       return this._previousAttributes[attr];
@@ -463,6 +482,7 @@
 
     // Get all of the attributes of the model at the time of the previous
     // `"change"` event.
+    // 返回最后一次'"change"'事件触发时的attributes
     previousAttributes: function() {
       return _.clone(this._previousAttributes);
     },
@@ -470,15 +490,16 @@
     // Fetch the model from the server. If the server's representation of the
     // model differs from its current attributes, they will be overridden,
     // triggering a `"change"` event.
+    // 从服务端取model。如果服务端的model和当前的不同，则会覆盖当前属性，并触发'"change"'
     fetch: function(options) {
       options = options ? _.clone(options) : {};
       if (options.parse === void 0) options.parse = true;
       var model = this;
       var success = options.success;
       options.success = function(resp) {
-        if (!model.set(model.parse(resp, options), options)) return false;
-        if (success) success(model, resp, options);
-        model.trigger('sync', model, resp, options);
+        if (!model.set(model.parse(resp, options), options)) return false; // set attributes
+        if (success) success(model, resp, options); // invoke success
+        model.trigger('sync', model, resp, options); // trigger sync
       };
       wrapError(this, options);
       return this.sync('read', this, options);
@@ -487,6 +508,8 @@
     // Set a hash of model attributes, and sync the model to the server.
     // If the server returns an attributes hash that differs, the model's
     // state will be `set` again.
+    // 为model设置属性，并且将model同步到服务端。如果服务端返回的数据和model不同，
+    // model的状态会重新设置为'set'
     save: function(key, val, options) {
       var attrs, method, xhr, attributes = this.attributes;
 
@@ -585,6 +608,7 @@
 
     // **parse** converts a response into the hash of attributes to be `set` on
     // the model. The default implementation is just to pass the response along.
+    // **parse**将响应数据转化成set能接受的hash格式。默认的实现仅仅简单的返回response
     parse: function(resp, options) {
       return resp;
     },
