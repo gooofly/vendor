@@ -526,6 +526,7 @@
       // If we're not waiting and attributes exist, save acts as
       // `set(attr).save(null, opts)` with validation. Otherwise, check if
       // the model will be valid when the attributes, if any, are set.
+      // 如果 we're not waiting 并且attributes存在，设置属性。否则，验证当属性为attributes时，model是否可用
       if (attrs && !options.wait) {
         if (!this.set(attrs, options)) return false;
       } else {
@@ -533,12 +534,14 @@
       }
 
       // Set temporary attributes if `{wait: true}`.
+      // 如果'{wait: true}'，设置临时属性
       if (attrs && options.wait) {
         this.attributes = _.extend({}, attributes, attrs);
       }
 
       // After a successful server-side save, the client is (optionally)
       // updated with the server-side state.
+      // 当服务端成功保存后，客户端更新状态
       if (options.parse === void 0) options.parse = true;
       var model = this;
       var success = options.success;
@@ -619,6 +622,7 @@
     },
 
     // A model is new if it has never been saved to the server, and lacks an id.
+    // **model**是否'新'的如果它从来没有向服务器保存数据，没有idAttribute
     isNew: function() {
       return !this.has(this.idAttribute);
     },
