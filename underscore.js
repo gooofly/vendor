@@ -603,8 +603,8 @@
   // available.
   _.bind = function(func, context) {
     var args, bound;
-    if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
-    if (!_.isFunction(func)) throw new TypeError;
+    if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1)); // 如果含有ES5的方法，则用ES5的方法
+    if (!_.isFunction(func)) throw new TypeError; // 判断参数是否是function1
     args = slice.call(arguments, 2);
     return bound = function() {
       if (!(this instanceof bound)) return func.apply(context, args.concat(slice.call(arguments)));
