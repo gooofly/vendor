@@ -131,10 +131,10 @@
     once: function(name, callback, context) {
       if (!eventsApi(this, 'once', name, [callback, context]) || !callback) return this;
       var self = this;
-      var once = _.once(function() { // https://github.com/jashkenas/backbone/issues/3200
+      var once = function() { // https://github.com/jashkenas/backbone/issues/3200
         self.off(name, once); // 在函数调用的时候，移除事件监听
         callback.apply(this, arguments); // 调用callback
-      });
+      };
       once._callback = callback; // 保存原来的callback，在Events.off的时候用来匹配callback
       return this.on(name, once, context);
     },
