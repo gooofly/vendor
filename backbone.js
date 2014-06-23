@@ -106,27 +106,36 @@
     //    ],
     //    blur: [...]
     // }
+    // Usage：
+    // 1. obj.on('eventName', callback[, context]);
+    // 2. obj.on('eventName1 eventName2', callback[, context]);
+    // 3. obj.on({
+    //   'eventName1': callback1,
+    //   'eventName2': callback2
+    // }[, context]);
     on: function(name, callback, context) {
       // 如果name是'change blur'或{change: callback}这种写法，会在eventsApi里面循环调用on方法
-      // 如果callback为空则直接return
+      // eventsApi方法返回true则说明是第一种参数写法，继续判断callback，若callback未传值，则直接return。
       if (!eventsApi(this, 'on', name, [callback, context]) || !callback) return this; 
       this._events || (this._events = {});
+      // this._events = this._events || {}; 我个人喜欢这样写，更易理解，还能不让jshint报warning，还省2字节！
       var events = this._events[name] || (this._events[name] = []);
+      // 把事件监听器放到一个专门放置事件监听器的对象_events中，供需要的时候调用
       events.push({callback: callback, context: context, ctx: context || this}); // context 和 ctx ？？
       return this;
     },
 
-    // Bind an event to only be triggered a single time. After the first time
+    // Bind events to only be triggered a single time. After the first time
     // the callback is invoked, it will be removed.
     // 绑定一个只会被触发一次的事件监听器
     once: function(name, callback, context) {
       if (!eventsApi(this, 'once', name, [callback, context]) || !callback) return this;
       var self = this;
-      var once = _.once(function() {
-        self.off(name, once);
-        callback.apply(this, arguments);
+      var once = _.once(function() { // https://github.com/jashkenas/backbone/issues/3200
+        self.off(name, once); // 在函数调用的时候，移除事件监听
+        callback.apply(this, arguments); // 调用callback
       });
-      once._callback = callback;
+      once._callback = callback; // 保存原来的callback，在Events.off的时候用来匹配callback
       return this.on(name, once, context);
     },
 
@@ -147,14 +156,14 @@
       names = name ? [name] : _.keys(this._events);
       for (i = 0, l = names.length; i < l; i++) {
         name = names[i];
-        if (events = this._events[name]) {
+        if ( events = this._events[name] ) {
           this._events[name] = retain = [];  // 先清空数组
           if (callback || context) { // 看是否提供了callback或context参数
             for (j = 0, k = events.length; j < k; j++) {
               ev = events[j];
               if ((callback && callback !== ev.callback && callback !== ev.callback._callback) ||
                   (context && context !== ev.context)) {
-                retain.push(ev);
+                retain.push(ev); // 排除不匹配的callback，重新push回数组中
               }
             }
           }
@@ -261,7 +270,7 @@
   // 当model发生改变时，触发change事件，而callback是绑定在view上的，即能对view进行改变
   _.each(listenMethods, function(implementation, method) {
     Events[method] = function(obj, name, callback) {
-      // listeningTo & this._listeningTo用来放置目标Object，通过一个全局唯一的id索引
+      // 取出/创建`this._listeningTo`(这个对象用来存放Obj)
       var listeningTo = this._listeningTo || (this._listeningTo = {});
       var id = obj._listenId || (obj._listenId = _.uniqueId('l')); // 为obj生成一个全局唯一的id
       listeningTo[id] = obj;
