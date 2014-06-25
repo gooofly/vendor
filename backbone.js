@@ -301,14 +301,14 @@
   var Model = Backbone.Model = function(attributes, options) {
     var attrs = attributes || {};
     options || (options = {});
-    this.cid = _.uniqueId('c');
+    this.cid = _.uniqueId('c'); // automatically generated and assigned a client id
     this.attributes = {};
     if (options.collection) this.collection = options.collection;
     if (options.parse) attrs = this.parse(attrs, options) || {};
     attrs = _.defaults({}, attrs, _.result(this, 'defaults'));
     this.set(attrs, options);
-    this.changed = {};
-    this.initialize.apply(this, arguments);
+    this.changed = {}; // A hash of attributes whose current and previous value differ
+    this.initialize.apply(this, arguments); // Initialization
   };
 
   // Attach all inheritable methods to the Model prototype.
@@ -316,7 +316,7 @@
   _.extend(Model.prototype, Events, {
 
     // A hash of attributes whose current and previous value differ.
-    // 用来保存改变值的hash
+    // 用来保存改变hash
     changed: null,
 
     // The value returned during the last failed validation.
@@ -387,6 +387,7 @@
       if (!this._validate(attrs, options)) return false;
 
       // Extract attributes and options.
+      // 取出特定属性
       unset           = options.unset;
       silent          = options.silent;
       changes         = [];
@@ -414,7 +415,8 @@
         unset ? delete current[attr] : current[attr] = val; // 如果配置了unset则删除属性，否则设置属性
       }
 
-      // Trigger all relevant attribute changes. 触发所有相关属性的'"change"'
+      // Trigger all relevant attribute changes.
+      // 如果没有设置静默模式则触发所有相关属性的'"change"'
       if (!silent) {
         if (changes.length) this._pending = options;
         for (var i = 0, l = changes.length; i < l; i++) {
