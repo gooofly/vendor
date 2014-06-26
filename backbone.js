@@ -304,10 +304,10 @@
     this.cid = _.uniqueId('c'); // automatically generated and assigned a client id
     this.attributes = {};
     if (options.collection) this.collection = options.collection;
-    if (options.parse) attrs = this.parse(attrs, options) || {};
+    if (options.parse) attrs = this.parse(attrs, options) || {}; // If `{parse: true}` is passed as an option, the attributes will first be converted by parse before being set on the model.
     attrs = _.defaults({}, attrs, _.result(this, 'defaults'));
     this.set(attrs, options);
-    this.changed = {}; // A hash of attributes whose current and previous value differ
+    this.changed = {}; // 用来保存被改变的属性
     this.initialize.apply(this, arguments); // Initialization
   };
 
@@ -316,7 +316,7 @@
   _.extend(Model.prototype, Events, {
 
     // A hash of attributes whose current and previous value differ.
-    // 用来保存改变hash
+    // 用来保存被改变的属性
     changed: null,
 
     // The value returned during the last failed validation.
@@ -345,7 +345,7 @@
     },
 
     // Get the value of an attribute.
-    // 取'attributes'中的属性值
+    // 取值
     get: function(attr) {
       return this.attributes[attr];
     },
@@ -387,15 +387,15 @@
       if (!this._validate(attrs, options)) return false;
 
       // Extract attributes and options.
-      // 取出特定属性
+      // 提取属性
       unset           = options.unset;
       silent          = options.silent;
       changes         = [];
-      changing        = this._changing;
+      changing        = this._changing; // 是否正在设置属性？？？
       this._changing  = true;
 
-      if (!changing) { // changing === this._changing === false，如果未changed，则备份原来的'attributes'
-        this._previousAttributes = _.clone(this.attributes);
+      if (!changing) { // 是否正在setting中（可能有多个set在同步进行中）？？？
+        this._previousAttributes = _.clone(this.attributes); // 复制出改变前的数据
         this.changed = {};
       }
       current = this.attributes, prev = this._previousAttributes;
@@ -441,7 +441,7 @@
 
     // Remove an attribute from the model, firing `"change"`. `unset` is a noop
     // if the attribute doesn't exist.
-    // 从**model**中移除属性，会触发'"change"'
+    // 从**model**中移除属性，会触发'"change"'，如果属性不存在`unset`不会做任何操作
     unset: function(attr, options) {
       return this.set(attr, void 0, _.extend({}, options, {unset: true}));
     },
@@ -450,17 +450,17 @@
     // 清空model中的属性，会触发'"change"'
     clear: function(options) {
       var attrs = {};
-      for (var key in this.attributes) attrs[key] = void 0;
-      return this.set(attrs, _.extend({}, options, {unset: true}));
+      for (var key in this.attributes) attrs[key] = void 0; // 循环this.attributes，复制所有key，并都赋值undefined
+      return this.set(attrs, _.extend({}, options, {unset: true})); // 调用this.set，应用空数据
     },
 
     // Determine if the model has changed since the last `"change"` event.
     // If you specify an attribute name, determine if that attribute has changed.
-    // 检查**model**从上次'"change"'事件后，属性是否有改变。如果你指定了一个属性名，
+    // 检查**model**从最后一次'"change"'事件后，属性是否有改变。如果你指定了一个属性名，
     // 那么就检查这个属性是否有改变。
     hasChanged: function(attr) {
-      if (attr == null) return !_.isEmpty(this.changed);
-      return _.has(this.changed, attr);
+      if (attr == null) return !_.isEmpty(this.changed); // 如果this.changed为空，则说明没有变化
+      return _.has(this.changed, attr); // 如果this.changed里面不包含这个属性，则说明没有变化
     },
 
     // Return an object containing all the attributes that have changed, or
@@ -473,19 +473,19 @@
     // 在决定哪部分的view需要升级add/or什么属性需要持久化到服务器时很有用。移除属性会使
     // 属性变为undefined。你也可以传递一个包含属性的对象去和model的属性对比，决定是否有不同。
     changedAttributes: function(diff) {
-      if (!diff) return this.hasChanged() ? _.clone(this.changed) : false;
+      if (!diff) return this.hasChanged() ? _.clone(this.changed) : false; // 如果没有传参，则说明是要返回所有发生改变的属性
       var val, changed = false;
       var old = this._changing ? this._previousAttributes : this.attributes;
-      for (var attr in diff) {
-        if (_.isEqual(old[attr], (val = diff[attr]))) continue;
-        (changed || (changed = {}))[attr] = val;
+      for (var attr in diff) { // 遍历参数中的属性
+        if (_.isEqual(old[attr], (val = diff[attr]))) continue; // 如果相等就进行下一个判断
+        (changed || (changed = {}))[attr] = val; // 存储有变化的属性
       }
       return changed;
     },
 
     // Get the previous value of an attribute, recorded at the time the last
     // `"change"` event was fired.
-    // 返回最后一次'"change"'事件触发时的attributes[attr]
+    // 返回最后一次'"change"'事件触发前属性的值
     previous: function(attr) {
       if (attr == null || !this._previousAttributes) return null;
       return this._previousAttributes[attr];
@@ -493,7 +493,7 @@
 
     // Get all of the attributes of the model at the time of the previous
     // `"change"` event.
-    // 返回最后一次'"change"'事件触发时的attributes
+    // 返回最后一次'"change"'事件触发前的所有属性
     previousAttributes: function() {
       return _.clone(this._previousAttributes);
     },
@@ -501,10 +501,10 @@
     // Fetch the model from the server. If the server's representation of the
     // model differs from its current attributes, they will be overridden,
     // triggering a `"change"` event.
-    // 从服务端取model。如果服务端的model和当前的不同，则会覆盖当前属性，并触发'"change"'
+    // 从服务端取数据。如果服务端的数据和当前的不同，则会覆盖当前属性，并触发'"change"'
     fetch: function(options) {
-      options = options ? _.clone(options) : {};
-      if (options.parse === void 0) options.parse = true;
+      options = options ? _.clone(options) : {}; // 这里为何需要clone
+      if (options.parse === void 0) options.parse = true; // If `{parse: true}` is passed as an option, the attributes will first be converted by parse before being set on the model.
       var model = this;
       var success = options.success;
       options.success = function(resp) {
@@ -512,7 +512,7 @@
         if (success) success(model, resp, options); // invoke success
         model.trigger('sync', model, resp, options); // trigger sync
       };
-      wrapError(this, options);
+      wrapError(this, options); // 设置options.error方法
       return this.sync('read', this, options);
     },
 
@@ -520,11 +520,11 @@
     // If the server returns an attributes hash that differs, the model's
     // state will be `set` again.
     // 为model设置属性，并且将model同步到服务端。如果服务端返回的数据和model不同，
-    // model的状态会重新设置为'set'
+    // model会重新设置属性
     save: function(key, val, options) {
       var attrs, method, xhr, attributes = this.attributes;
 
-      // Handle both `"key", value` and `{key: value}` -style arguments.
+      // Handle both `"key", value` and `{key: value}` -style arguments. 参数处理成对象的形式
       if (key == null || typeof key === 'object') {
         attrs = key;
         options = val;
@@ -532,15 +532,14 @@
         (attrs = {})[key] = val;
       }
 
-      options = _.extend({validate: true}, options);
+      options = _.extend({validate: true}, options);  // 设置validate
 
       // If we're not waiting and attributes exist, save acts as
       // `set(attr).save(null, opts)` with validation. Otherwise, check if
       // the model will be valid when the attributes, if any, are set.
-      // 如果 we're not waiting 并且attributes存在，设置属性。否则，验证当属性为attributes时，model是否可用
-      if (attrs && !options.wait) {
+      if (attrs && !options.wait) {  // 如果options.wait = false并且attrs不为空，设置属性。
         if (!this.set(attrs, options)) return false;
-      } else {
+      } else { // 校验属性
         if (!this._validate(attrs, options)) return false;
       }
 
@@ -553,7 +552,7 @@
       // After a successful server-side save, the client is (optionally)
       // updated with the server-side state.
       // 当服务端成功保存后，客户端更新状态
-      if (options.parse === void 0) options.parse = true;
+      if (options.parse === void 0) options.parse = true; // If `{parse: true}` is passed as an option, the attributes will first be converted by parse before being set on the model.
       var model = this;
       var success = options.success;
       options.success = function(resp) {
@@ -561,7 +560,7 @@
         model.attributes = attributes;
         var serverAttrs = model.parse(resp, options);
         if (options.wait) serverAttrs = _.extend(attrs || {}, serverAttrs);
-        if (_.isObject(serverAttrs) && !model.set(serverAttrs, options)) {
+        if (_.isObject(serverAttrs) && !model.set(serverAttrs, options)) { // 如果设置不成功，则return false
           return false;
         }
         if (success) success(model, resp, options);
@@ -582,6 +581,8 @@
     // Destroy this model on the server if it was already persisted.
     // Optimistically removes the model from its collection, if it has one.
     // If `wait: true` is passed, waits for the server to respond before removal.
+    // 如果model在服务器已经被持久化了，删除它。并从collection删除它，如果它在一个collection中。
+    // 如果设置了`wait: true`，在删除前等待服务器的response
     destroy: function(options) {
       options = options ? _.clone(options) : {};
       var model = this;
@@ -611,6 +612,7 @@
     // Default URL for the model's representation on the server -- if you're
     // using Backbone's restful methods, override this to change the endpoint
     // that will be called.
+    // model指向服务器的默认url -- 如果你用的是Backbone的restful方法，
     url: function() {
       var base =
         _.result(this, 'urlRoot') ||
@@ -628,6 +630,7 @@
     },
 
     // Create a new model with identical attributes to this one.
+    // 拷贝一个数据一样的model
     clone: function() {
       return new this.constructor(this.attributes);
     },
@@ -653,7 +656,6 @@
       this.trigger('invalid', this, error, _.extend(options, {validationError: error}));
       return false;
     }
-
   });
 
   // Underscore methods that we want to implement on the Model.
@@ -1683,6 +1685,7 @@
   };
 
   // Wrap an optional error callback with a fallback error event.
+  // 为一个可选的error回调函数包装一个error事件
   var wrapError = function(model, options) {
     var error = options.error;
     options.error = function(resp) {
