@@ -303,7 +303,7 @@
     options || (options = {});
     this.cid = _.uniqueId('c'); // automatically generated and assigned a client id
     this.attributes = {};
-    if (options.collection) this.collection = options.collection;
+    if (options.collection) this.collection = options.collection; // TODO:?
     if (options.parse) attrs = this.parse(attrs, options) || {}; // If `{parse: true}` is passed as an option, the attributes will first be converted by parse before being set on the model.
     attrs = _.defaults({}, attrs, _.result(this, 'defaults'));
     this.set(attrs, options);
@@ -391,10 +391,10 @@
       unset           = options.unset;
       silent          = options.silent;
       changes         = [];
-      changing        = this._changing; // 是否正在设置属性？？？
+      changing        = this._changing; // 是否正在设置属性
       this._changing  = true;
 
-      if (!changing) { // 是否正在setting中（可能有多个set在同步进行中）？？？
+      if (!changing) { // 为了防止嵌套设置属性的时候重复设值导致出问题
         this._previousAttributes = _.clone(this.attributes); // 复制出改变前的数据
         this.changed = {};
       }
@@ -416,7 +416,7 @@
       }
 
       // Trigger all relevant attribute changes.
-      // 如果没有设置静默模式则触发所有相关属性的'"change"'
+      // 如果没有设置静默模式则触发所有相关属性的'"change"',如果设置silent为true，表示静默模式修改数据，即在修改时不触发任何事件
       if (!silent) {
         if (changes.length) this._pending = options;
         for (var i = 0, l = changes.length; i < l; i++) {
@@ -428,7 +428,7 @@
       // be recursively nested within `"change"` events.
       if (changing) return this;
       if (!silent) {
-        while (this._pending) {
+        while (this._pending) { // 为了防止嵌套设属性的时候重复trigger，参照这个[test](https://github.com/jashkenas/backbone/pull/2022)
           options = this._pending;
           this._pending = false;
           this.trigger('change', this, options);
@@ -612,7 +612,7 @@
     // Default URL for the model's representation on the server -- if you're
     // using Backbone's restful methods, override this to change the endpoint
     // that will be called.
-    // model指向服务器的默认url -- 如果你用的是Backbone的restful方法，
+    // model指向服务器的默认url -- 如果你用的是Backbone的restful方法，覆盖这个函数
     url: function() {
       var base =
         _.result(this, 'urlRoot') ||
@@ -985,6 +985,7 @@
 
     // Private method to reset all internal state. Called when the collection
     // is first initialized or reset.
+    // 私有方法，用来重置内部状态。在collection第一次初始化或reset的时候调用。
     _reset: function() {
       this.length = 0;
       this.models = [];
