@@ -201,13 +201,14 @@ Deferred.prototype = {
 
 	_fire : function (okng, value) {
 		var next = "ok";
-		try {
+		try { // 调用Deffered实例的事件处理函数
 			value = this.callback[okng].call(this, value);
 		} catch (e) {
 			next  = "ng";
 			value = e;
 			if (Deferred.onerror) Deferred.onerror(e);
 		}
+		// 判断事件处理程序返回的是否为Deffered实例
 		if (Deferred.isDeferred(value)) {
 			value._next = this._next;
 		} else {
