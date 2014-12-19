@@ -3,6 +3,16 @@
 //     (c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 //     Underscore may be freely distributed under the MIT license.
 
+
+// underscore这个库的结构（或者说思路）大致是这样的：
+// 创建一个包装器, 将一些原始数据进行包装，所有的undersocre对象, 内部均通过wrapper函数进行构造和封装
+// underscore与wrapper的内部关系是:
+// - 内部定义变量_, 将underscore相关的方法添加到_, 这样就可以支持函数式的调用, 如_.bind()
+// - 内部定义wrapper类, 将_的原型对象指向wrapper类的原型
+// - 将underscore相关的方法添加到wrapper原型, 创建的_对象就具备了underscore的方法
+// - 将Array.prototype相关方法添加到wrapper原型, 创建的_对象就具备了Array.prototype中的方法
+// - new _()时实际创建并返回了一个wrapper()对象, 并将原始数组存储到_wrapped变量, 并将原始值作为第一个参数调用对应方法
+
 (function() {
 
   // Baseline setup
@@ -17,10 +27,14 @@
   var previousUnderscore = root._;
 
   // Save bytes in the minified (but not gzipped) version:
-  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
+  // 将内置对象的原型链缓存在局部变量, 以节省字节
+  var
+    ArrayProto = Array.prototype,
+    ObjProto = Object.prototype,
+    FuncProto = Function.prototype;
 
   // Create quick reference variables for speed access to core prototypes.
-  // 创建js原生方法的快捷式
+  // 创建js core原生方法的快捷引用
   var
     push             = ArrayProto.push,
     slice            = ArrayProto.slice,
@@ -30,6 +44,7 @@
 
   // All **ECMAScript 5** native function implementations that we hope to use
   // are declared here.
+  // 把我们希望使用的ES5方法引用声明在这里
   var
     nativeIsArray      = Array.isArray,
     nativeKeys         = Object.keys,
@@ -46,6 +61,7 @@
   // Export the Underscore object for **Node.js**, with
   // backwards-compatibility for the old `require()` API. If we're in
   // the browser, add `_` as a global object.
+  // 为不同宿主环境设置引用
   if (typeof exports !== 'undefined') {
     if (typeof module !== 'undefined' && module.exports) {
       exports = module.exports = _;
@@ -85,6 +101,8 @@
   // A mostly-internal function to generate callbacks that can be applied
   // to each element in a collection, returning the desired result — either
   // identity, an arbitrary callback, a property matcher, or a property accessor.
+  // 一个重要的内部函数用来生成可应用到集合中每个元素的回调， 
+  // 返回想要的结果 - 无论是等式，任意回调，属性匹配，或属性访问。 
   _.iteratee = function(value, context, argCount) {
     if (value == null) return _.identity;
     if (_.isFunction(value)) return createCallback(value, context, argCount);
@@ -98,11 +116,24 @@
   // The cornerstone, an `each` implementation, aka `forEach`.
   // Handles raw objects in addition to array-likes. Treats all
   // sparse array-likes as if they were dense.
+  // 遍历list中的所有元素，按顺序用遍历输出每个元素。
+  // 如果传递了context参数，则把iteratee绑定到context对象上。
+  // 每次调用iteratee都会传递三个参数：(element, index, list)。
+  // 如果list是个JavaScript对象，iteratee的参数是 (value, key, list))。
+  // 返回list以方便链式调用。
+  // 
+  // 迭代函数通过createCallback封装
+  // 对于数组,类数组(如:arguments),采用arr[i]的方式遍历
+  // 对于对象:
+  // 1. 用_.keys(obj)取出obj中所有的key,返回所有key组成的数组keys
+  // 2. 通过keys[i]遍历obj的属性
+  // 
+  // TODO: 这个函数有个BUG,详情见 [issues](https://github.com/jashkenas/underscore/issues/1590)
   _.each = _.forEach = function(obj, iteratee, context) {
     if (obj == null) return obj;
     iteratee = createCallback(iteratee, context);
     var i, length = obj.length;
-    if (length === +length) {
+    if (length === +length) { // 这种写法是为了确保obj.length是number
       for (i = 0; i < length; i++) {
         iteratee(obj[i], i, obj);
       }
@@ -116,6 +147,11 @@
   };
 
   // Return the results of applying the iteratee to each element.
+  // 通过变换函数（iteratee迭代器 iteratee是可以传一个对象的!）
+  // 把list中的每个值映射到一个新的数组中
+  // 如果list是个JavaScript对象，iteratee的参数是(value, key, list)。
+  // 
+  // TODO: 这个函数有个BUG,详情见 [issues](https://github.com/jashkenas/underscore/issues/1590)
   _.map = _.collect = function(obj, iteratee, context) {
     if (obj == null) return [];
     iteratee = _.iteratee(iteratee, context);
@@ -849,6 +885,7 @@
 
   // Retrieve the names of an object's properties.
   // Delegates to **ECMAScript 5**'s native `Object.keys`
+  // 获取object对象所有的属性名称
   _.keys = function(obj) {
     if (!_.isObject(obj)) return [];
     if (nativeKeys) return nativeKeys(obj);
@@ -869,6 +906,7 @@
   };
 
   // Convert an object into a list of `[key, value]` pairs.
+  // 
   _.pairs = function(obj) {
     var keys = _.keys(obj);
     var length = keys.length;
@@ -1144,6 +1182,8 @@
 
   // Shortcut function for checking if an object has a given property directly
   // on itself (in other words, not on a prototype).
+  // 对象是否包含给定的键吗？等同于object.hasOwnProperty(key)，
+  // 但是使用hasOwnProperty 函数的一个安全引用，以防意外覆盖。
   _.has = function(obj, key) {
     return obj != null && hasOwnProperty.call(obj, key);
   };
@@ -1159,6 +1199,9 @@
   };
 
   // Keep the identity function around for default iteratees.
+  // 这个函数看似无用, 但是在Underscore里被用作默认的迭代器iterator.
+  // 中间有一种原因就是内部接口统一的需要。因为很多方法都是接受的是一个函数。
+  // 但是它使用的值其实就是参数本身。
   _.identity = function(value) {
     return value;
   };
@@ -1179,6 +1222,22 @@
   };
 
   // Returns a predicate for checking whether an object has a given set of `key:value` pairs.
+  // 返回一个断言函数，这个函数会给你一个断言
+  // 可以用来辨别 给定的对象是否匹配attrs指定键/值属性
+  // eg:
+  // var list = [
+  //  {selected: true, visible: true},
+  //  {selected: true, visible: true, a: 1},
+  //  {selected: true, visible: false}
+  // ];
+  // var ready = _.matches({selected: true, visible: true});
+  // var readyToGoList = _.filter(list, ready);
+
+  // return [
+  //  {selected: true, visible: true},
+  //  {selected: true, visible: true, a: 1}
+  // ];
+  // 只有给定的obj包含`selected: true, visible: true`,才能匹配成功
   _.matches = function(attrs) {
     var pairs = _.pairs(attrs), length = pairs.length;
     return function(obj) {
@@ -1186,6 +1245,8 @@
       obj = new Object(obj);
       for (var i = 0; i < length; i++) {
         var pair = pairs[i], key = pair[0];
+        // 如果值或键有一个不匹配,则返回false
+        // if( pair[1] === obj[key] && key in obj ) return true; 取反
         if (pair[1] !== obj[key] || !(key in obj)) return false;
       }
       return true;
@@ -1418,4 +1479,3 @@
     });
   }
 }.call(this));
-Vimium has been updated to 1.49.×
