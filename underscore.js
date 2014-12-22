@@ -522,10 +522,18 @@
 
   // Array Functions
   // ---------------
+  // 
+  // 
+  // _.first 对应 _.last
+  // _.initial 对应 _.rest
 
   // Get the first element of an array. Passing **n** will return the first N
   // values in the array. Aliased as `head` and `take`. The **guard** check
   // allows it to work with `_.map`.
+  // 返回array（数组）的第一个元素。传递 n参数将返回数组中的前n个元素
+  // 
+  // TODO:
+  //      又出现了这个guard,当指定guard为true时,指定的n无效
   _.first = _.head = _.take = function(array, n, guard) {
     if (array == null) return void 0;
     if (n == null || guard) return array[0];
@@ -537,12 +545,17 @@
   // the arguments object. Passing **n** will return all the values in
   // the array, excluding the last N. The **guard** check allows it to work with
   // `_.map`.
+  // 
+  // 返回数组中除了最后一个元素外的其他全部元素。 在arguments对象上特别有用。
+  // 传递 n参数将从结果中排除数组后面的 n 个元素
+  // 设置guard为true同样将忽略设置的n
   _.initial = function(array, n, guard) {
     return slice.call(array, 0, Math.max(0, array.length - (n == null || guard ? 1 : n)));
   };
 
   // Get the last element of an array. Passing **n** will return the last N
   // values in the array. The **guard** check allows it to work with `_.map`.
+  // 返回array（数组）的最后一个元素。传递 n参数将返回数组里的后面的n个元素
   _.last = function(array, n, guard) {
     if (array == null) return void 0;
     if (n == null || guard) return array[array.length - 1];
@@ -553,11 +566,15 @@
   // Especially useful on the arguments object. Passing an **n** will return
   // the rest N values in the array. The **guard**
   // check allows it to work with `_.map`.
+  // 
+  // 返回数组中除了第一个元素外的其他全部元素。传递 n 参数将返回从n开始的剩余所有元素 。
   _.rest = _.tail = _.drop = function(array, n, guard) {
     return slice.call(array, n == null || guard ? 1 : n);
   };
 
   // Trim out all falsy values from an array.
+  // 返回一个除去所有false值的 array副本。 
+  // 在javascript中, false, null, 0, "", undefined 和 NaN 都是false值.
   _.compact = function(array) {
     return _.filter(array, _.identity);
   };
@@ -581,11 +598,14 @@
   };
 
   // Flatten out an array, either recursively (by default), or just one level.
+  // 将一个嵌套多层的数组 array（数组） (嵌套可以是任何层数)转换为只有一层的数组。 
+  // 如果你传递 shallow参数，数组将只减少一维的嵌套。
   _.flatten = function(array, shallow) {
     return flatten(array, shallow, false, []);
   };
 
   // Return a version of the array that does not contain the specified value(s).
+  // 返回一个删除所有values值后的 array副本
   _.without = function(array) {
     return _.difference(array, slice.call(arguments, 1));
   };
