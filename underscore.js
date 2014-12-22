@@ -239,6 +239,7 @@
 
   // Determine whether all of the elements match a truth test.
   // Aliased as `all`.
+  // TODO: 老BUG
   _.every = _.all = function(obj, predicate, context) {
     if (obj == null) return true;
     predicate = _.iteratee(predicate, context);
@@ -276,6 +277,10 @@
   };
 
   // Invoke a method (with arguments) on every item in a collection.
+  // 在list的每个元素上执行method方法。 任何传递给invoke的额外参数，
+  // invoke都会在调用methodName方法的时候传递给它。
+  // 如果method是函数,则以每个元素为上下文调用该method,
+  // 如果method不是函数,则把method当做元素的方法名来调用.
   _.invoke = function(obj, method) {
     var args = slice.call(arguments, 2);
     var isFunc = _.isFunction(method);
@@ -285,23 +290,31 @@
   };
 
   // Convenience version of a common use case of `map`: fetching a property.
+  // _.map最常使用的用例模型的简化版本 : 萃取对象数组中某属性值，返回一个数组。
   _.pluck = function(obj, key) {
     return _.map(obj, _.property(key));
   };
 
   // Convenience version of a common use case of `filter`: selecting only objects
   // containing specific `key:value` pairs.
+  // _.filter最常使用的用例模型的简化版本 :
+  // 遍历obj中的每一个元素，返回一个数组，这个数组包含所有匹配attrs所列键值对的元素
   _.where = function(obj, attrs) {
     return _.filter(obj, _.matches(attrs));
   };
 
   // Convenience version of a common use case of `find`: getting the first object
   // containing specific `key:value` pairs.
+  // _.find最常使用的用例模型的简化版本 : 返回第一个匹配attrs所列键值对的元素
   _.findWhere = function(obj, attrs) {
     return _.find(obj, _.matches(attrs));
   };
 
   // Return the maximum element (or element-based computation).
+  // 返回obj中的最大值。如果传递iteratee参数，iteratee将作为obj中每个值的排序依据。
+  // 如果obj为空，将返回-Infinity，所以你可能需要事先用isEmpty检查 obj 。
+  // 
+  // TODO: obj.length === +obj.length!
   _.max = function(obj, iteratee, context) {
     var result = -Infinity, lastComputed = -Infinity,
         value, computed;
@@ -327,6 +340,10 @@
   };
 
   // Return the minimum element (or element-based computation).
+  // 返回obj中的最小值。如果传递iteratee参数，iteratee将作为obj中每个值的排序依据。
+  // 如果obj为空，将返回-Infinity，所以你可能需要事先用isEmpty检查 obj 。
+  // 
+  // TODO: obj.length === +obj.length!
   _.min = function(obj, iteratee, context) {
     var result = Infinity, lastComputed = Infinity,
         value, computed;
@@ -353,6 +370,9 @@
 
   // Shuffle a collection, using the modern version of the
   // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
+  // 返回一个随机乱序的 obj 副本, 使用 Fisher-Yates shuffle 来进行随机乱序
+  // 
+  // TODO: obj.length === +obj.length!
   _.shuffle = function(obj) {
     var set = obj && obj.length === +obj.length ? obj : _.values(obj);
     var length = set.length;
@@ -368,6 +388,11 @@
   // Sample **n** random values from a collection.
   // If **n** is not specified, returns a single random element.
   // The internal `guard` argument allows it to work with `map`.
+  // 从 obj中产生一个随机样本。传递一个数字表示从obj中返回n个随机元素。
+  // 否则将返回一个单一的随机项.
+  // 
+  // TODO: obj.length === +obj.length!
+  //       guard的目的是?传递guard参数,与不传n参数是一样的效果
   _.sample = function(obj, n, guard) {
     if (n == null || guard) {
       if (obj.length !== +obj.length) obj = _.values(obj);
@@ -377,6 +402,13 @@
   };
 
   // Sort the object's values by a criterion produced by an iteratee.
+  // 返回一个排序后的obj拷贝副本。如果传递iteratee参数，
+  // iteratee将作为obj中每个值的排序依据。
+  // 迭代器也可以是字符串的属性的名称进行排序的(比如 length)。
+  // 
+  // 调用_.map()方法遍历集合, 并将集合中的元素放到value节点, 将元素中需要进行比较的数据放到criteria属性中
+  // 调用sort()方法将集合中的元素按照criteria属性中的数据进行顺序排序
+  // 调用pluck获取排序后的对象集合并返回
   _.sortBy = function(obj, iteratee, context) {
     iteratee = _.iteratee(iteratee, context);
     return _.pluck(_.map(obj, function(value, index, list) {
@@ -397,6 +429,8 @@
   };
 
   // An internal function used for aggregate "group by" operations.
+  // _.groupBy, _.indexBy, _.countBy的私有方法,用来处理这些方法的公用逻辑
+  // 三者的不同逻辑部分,通过behavior方法传入
   var group = function(behavior) {
     return function(obj, iteratee, context) {
       var result = {};
@@ -411,12 +445,19 @@
 
   // Groups the object's values by a criterion. Pass either a string attribute
   // to group by, or a function that returns the criterion.
+  // 把一个集合分组为多个集合，通过 iterator 返回的结果进行分组. 
+  // 如果 iterator 是一个字符串而不是函数, 
+  // 那么将使用 iterator 作为各元素的属性名来对比进行分组.
   _.groupBy = group(function(result, value, key) {
-    if (_.has(result, key)) result[key].push(value); else result[key] = [value];
+    if (_.has(result, key)) result[key].push(value);
+    else result[key] = [value];
   });
 
   // Indexes the object's values by a criterion, similar to `groupBy`, but for
   // when you know that your index values will be unique.
+  // 给定一个list，和 一个用来返回一个在列表中的每个元素键 
+  // 的iterator 函数（或属性名）， 返回一个每一项索引的对象。
+  // 和groupBy非常像，但是当你知道你的键是唯一的时候可以使用indexBy 。
   _.indexBy = group(function(result, value, key) {
     result[key] = value;
   });
@@ -424,12 +465,17 @@
   // Counts instances of an object that group by a certain criterion. Pass
   // either a string attribute to count by, or a function that returns the
   // criterion.
+  // 排序一个列表组成一个组，并且返回各组中的对象的数量的计数。
+  // 类似groupBy，但是不是返回列表的值，而是返回在该组中值的数目。
   _.countBy = group(function(result, value, key) {
     if (_.has(result, key)) result[key]++; else result[key] = 1;
   });
 
   // Use a comparator function to figure out the smallest index at which
   // an object should be inserted so as to maintain order. Uses binary search.
+  // 使用二分查找确定value在list中的位置序号，value按此序号插入能保持list原有的排序
+  // 如果提供iterator函数，iterator将作为list排序的依据，包括你传递的value 。
+  // iterator也可以是字符串的属性名用来排序(比如length)。
   _.sortedIndex = function(array, obj, iteratee, context) {
     iteratee = _.iteratee(iteratee, context, 1);
     var value = iteratee(obj);
@@ -442,6 +488,9 @@
   };
 
   // Safely create a real, live array from anything iterable.
+  // 把obj(任何可以迭代的对象)转换成一个数组，在转换 arguments 对象时非常有用。
+  // 
+  // TODO: bug about obj.length
   _.toArray = function(obj) {
     if (!obj) return [];
     if (_.isArray(obj)) return slice.call(obj);
@@ -450,6 +499,9 @@
   };
 
   // Return the number of elements in an object.
+  // 返回obj的长度。
+  // 
+  // TODO: bug about obj.length
   _.size = function(obj) {
     if (obj == null) return 0;
     return obj.length === +obj.length ? obj.length : _.keys(obj).length;
@@ -457,6 +509,8 @@
 
   // Split a collection into two arrays: one whose elements all satisfy the given
   // predicate, and one whose elements all do not satisfy the predicate.
+  // 拆分一个数组（array）为两个数组：  第一个数组其元素都满足predicate迭代函数， 
+  // 而第二个的所有元素均不能满足predicate迭代函数。
   _.partition = function(obj, predicate, context) {
     predicate = _.iteratee(predicate, context);
     var pass = [], fail = [];
@@ -631,6 +685,9 @@
   // or -1 if the item is not included in the array.
   // If the array is large and already in sort order, pass `true`
   // for **isSorted** to use binary search.
+  // 返回value在该 array 中的索引值，如果value不存在 array中就返回-1.
+  // 如果传入的isSorted为数字,正数表示从第n位开始擦找,负数表示从右往左第几位
+  // 开始查找.
   _.indexOf = function(array, item, isSorted) {
     if (array == null) return -1;
     var i = 0, length = array.length;
