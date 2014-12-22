@@ -189,6 +189,7 @@
   };
 
   // The right-associative version of reduce, also known as `foldr`.
+  // TODO: 还是有同样的bug,我都懒得去github找相应issue了
   _.reduceRight = _.foldr = function(obj, iteratee, memo, context) {
     if (obj == null) obj = [];
     iteratee = createCallback(iteratee, context, 4);
