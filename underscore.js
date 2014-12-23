@@ -558,7 +558,7 @@
   // 返回array（数组）的最后一个元素。传递 n参数将返回数组里的后面的n个元素
   _.last = function(array, n, guard) {
     if (array == null) return void 0;
-    if (n == null || guard) return array[array.length - 1];
+    if (n == null || guard) return arra[array.length - 1];
     return slice.call(array, Math.max(array.length - n, 0));
   };
 
@@ -580,13 +580,14 @@
   };
 
   // Internal implementation of a recursive `flatten` function.
+  // strict 如果设置为true,则非数组会被剔除
   var flatten = function(input, shallow, strict, output) {
     if (shallow && _.every(input, _.isArray)) {
       return concat.apply(output, input);
     }
     for (var i = 0, length = input.length; i < length; i++) {
       var value = input[i];
-      if (!_.isArray(value) && !_.isArguments(value)) {
+      if (!_.isArray(value) && !_.isArguments(value)) {// 非数组,非arguments
         if (!strict) output.push(value);
       } else if (shallow) {
         push.apply(output, value);
@@ -605,7 +606,7 @@
   };
 
   // Return a version of the array that does not contain the specified value(s).
-  // 返回一个删除所有values值后的 array副本
+  // 返回array副本,它删除了array之后传入的参数
   _.without = function(array) {
     return _.difference(array, slice.call(arguments, 1));
   };
@@ -613,6 +614,9 @@
   // Produce a duplicate-free version of the array. If the array has already
   // been sorted, you have the option of using a faster algorithm.
   // Aliased as `unique`.
+  // 返回 array去重后的副本, 使用 === 做相等测试. 如果您确定 array 已经排序, 
+  // 那么给 isSorted 参数传递 true值, 此函数将运行的更快的算法. 
+  // 如果要处理对象元素, 传参 iterator 来获取要对比的属性.
   _.uniq = _.unique = function(array, isSorted, iteratee, context) {
     if (array == null) return [];
     if (!_.isBoolean(isSorted)) {
@@ -625,10 +629,10 @@
     var seen = [];
     for (var i = 0, length = array.length; i < length; i++) {
       var value = array[i];
-      if (isSorted) {
+      if (isSorted) { // 如果是已排序的数组
         if (!i || seen !== value) result.push(value);
         seen = value;
-      } else if (iteratee) {
+      } else if (iteratee) { // 如果提供了判断函数
         var computed = iteratee(value, i, array);
         if (_.indexOf(seen, computed) < 0) {
           seen.push(computed);
@@ -643,6 +647,8 @@
 
   // Produce an array that contains the union: each distinct element from all of
   // the passed-in arrays.
+  // 返回传入的 arrays（数组）并集：
+  // 按顺序返回，返回数组的元素是唯一的，可以传入一个或多个 arrays（数组）
   _.union = function() {
     return _.uniq(flatten(arguments, true, true, []));
   };
@@ -666,6 +672,7 @@
 
   // Take the difference between one array and a number of other arrays.
   // Only the elements present in just the first array will remain.
+  // 返回array中有,而array2中没有的属性
   _.difference = function(array) {
     var rest = flatten(slice.call(arguments, 1), true, true, []);
     return _.filter(array, function(value){
@@ -688,6 +695,8 @@
   // Converts lists into objects. Pass either a single array of `[key, value]`
   // pairs, or two parallel arrays of the same length -- one of keys, and one of
   // the corresponding values.
+  // 将数组转换为对象。传递任何一个单独[key, value]对的列表，
+  // 或者一个键的列表和一个值得列表。 如果存在重复键，最后一个值将被返回。
   _.object = function(list, values) {
     if (list == null) return {};
     var result = {};
