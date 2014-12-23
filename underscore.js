@@ -655,6 +655,7 @@
 
   // Produce an array that contains every item shared between all the
   // passed-in arrays.
+  // 返回传入 arrays（数组）交集。结果中的每个值是存在于传入的每个array里
   _.intersection = function(array) {
     if (array == null) return [];
     var result = [];
@@ -682,6 +683,8 @@
 
   // Zip together multiple lists into a single array -- elements that share
   // an index go together.
+  // 将 每个arrays中相应位置的值合并在一起。在合并分开保存的数据时很有用. 
+  // 如果你用来处理矩阵嵌套数组时, _.zip.apply 可以做类似的效果。
   _.zip = function(array) {
     if (array == null) return [];
     var length = _.max(arguments, 'length').length;
@@ -706,7 +709,7 @@
       } else {
         result[list[i][0]] = list[i][1];
       }
-    }
+    } 
     return result;
   };
 
@@ -745,6 +748,12 @@
   // Generate an integer Array containing an arithmetic progression. A port of
   // the native Python `range()` function. See
   // [the Python documentation](http://docs.python.org/library/functions.html#range).
+  // 一个用来创建整数灵活编号的列表的函数，便于each 和 map循环。
+  // 如果省略start则默认为 0；step 默认为 1.
+  // 返回一个从start 到stop的整数的列表，用step来增加 （或减少）独占。
+  // 值得注意的是，如果stop值在start前面（也就是stop值小于start值），
+  // 那么值域会被认为是零长度，而不是负增长。-如果你要一个负数的值域 ，
+  // 请使用负数step.
   _.range = function(start, stop, step) {
     if (arguments.length <= 1) {
       stop = start || 0;
@@ -771,6 +780,10 @@
   // Create a function bound to a given object (assigning `this`, and arguments,
   // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
   // available.
+  // 绑定函数 function 到对象 object 上, 也就是无论何时调用函数, 
+  // 函数里的 this 都指向这个 object. 任意可选参数 arguments 可以传递给函数 
+  // function , 可以填充函数所需要的参数, 这也被称为 partial application。
+  // 对于没有结合上下文的partial application绑定，请使用partial。 
   _.bind = function(func, context) {
     var args, bound;
     if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
@@ -791,6 +804,8 @@
   // Partially apply a function by creating a version that has had some of its
   // arguments pre-filled, without changing its dynamic `this` context. _ acts
   // as a placeholder, allowing any combination of arguments to be pre-filled.
+  // 局部应用一个函数填充在任意个数的 参数，不改变其动态this值。和bind方法很相近。
+  // 你可以在你的参数列表中传递_来指定一个参数 ，不应该被预先填充
   _.partial = function(func) {
     var boundArgs = slice.call(arguments, 1);
     return function() {
