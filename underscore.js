@@ -805,15 +805,22 @@
   // arguments pre-filled, without changing its dynamic `this` context. _ acts
   // as a placeholder, allowing any combination of arguments to be pre-filled.
   // 局部应用一个函数填充在任意个数的 参数，不改变其动态this值。和bind方法很相近。
-  // 你可以在你的参数列表中传递_来指定一个参数 ，不应该被预先填充
+  // 可以再参数列表中传递_来作为占位符,具体效果看下面例子和源码
+  // 
+  // eg:
+  // var aa = function() {console.log(arguments)}
+  // var bb = _.partial(aa, 1, _, 3)
+  // bb(2, 4)
+  // [1, 2, 3, 4]
   _.partial = function(func) {
     var boundArgs = slice.call(arguments, 1);
     return function() {
       var position = 0;
-      var args = boundArgs.slice();
+      var args = boundArgs.slice(); // 替换占位符
       for (var i = 0, length = args.length; i < length; i++) {
         if (args[i] === _) args[i] = arguments[position++];
       }
+      // 合并参数
       while (position < arguments.length) args.push(arguments[position++]);
       return func.apply(this, args);
     };
