@@ -840,6 +840,15 @@
   };
 
   // Memoize an expensive function by storing its results.
+  // Memoizes方法可以缓存某函数的计算结果。对于耗时较长的计算是很有帮助的。
+  // 如果传递了 hashFunction 参数，就用 hashFunction 的返回值作为key存储函数的计算结果。 
+  // hashFunction 默认使用function的第一个参数作为key。
+  // memoized值的缓存  可作为 返回函数的cache属性。
+  // 
+  // eg: 
+  // var fibonacci = _.memoize(function(n) {
+  //   return n < 2 ? n: fibonacci(n - 1) + fibonacci(n - 2);
+  // });
   _.memoize = function(func, hasher) {
     var memoize = function(key) {
       var cache = memoize.cache;
@@ -853,6 +862,7 @@
 
   // Delays a function for the given number of milliseconds, and then calls
   // it with the arguments supplied.
+  // 延迟执行给定的函数
   _.delay = function(func, wait) {
     var args = slice.call(arguments, 2);
     return setTimeout(function(){
@@ -871,31 +881,43 @@
   // as much as it can, without ever going more than once per `wait` duration;
   // but if you'd like to disable the execution on the leading edge, pass
   // `{leading: false}`. To disable execution on the trailing edge, ditto.
+  // 创建并返回一个像节流阀一样的函数，当重复调用函数的时候，最多每隔 wait毫秒调用一次该函数。
+  // 对于想控制一些触发频率较高的事件有帮助。
+  // 默认情况下，throttle将在你调用的第一时间尽快执行这个function，并且，
+  // 如果你在wait周期内调用任意次数的函数，都将尽快的被覆盖。如果你想禁用第一次首先执行的话，
+  // 传递{leading: false}，还有如果你想禁用最后一次执行的话，传递{trailing: false}。
+  // 
+  // timeout: 用来保存setTimeout返回的ID, 作用是控制最后一次函数调用
+  // previous: 用来保存时间戳,通过和now取差, 判断是否大于函数执行的时间间隔
+  // args: 把传递给函数的参数保存在闭包中, 以便于在later中使用
   _.throttle = function(func, wait, options) {
     var context, args, result;
     var timeout = null;
     var previous = 0;
     if (!options) options = {};
     var later = function() {
+      // 如果设置了leading: false, 则禁用第一次首先执行,否则给previous赋值当前时间戳
       previous = options.leading === false ? 0 : _.now();
       timeout = null;
       result = func.apply(context, args);
       if (!timeout) context = args = null;
     };
     return function() {
-      var now = _.now();
+      var now = _.now(); // 获取当前时间戳
+      // 如果previous为零,且禁用第一次首先执行,则给previous赋值为当前时间戳
       if (!previous && options.leading === false) previous = now;
       var remaining = wait - (now - previous);
       context = this;
       args = arguments;
+      // 计算时间差,看是否执行函数
       if (remaining <= 0 || remaining > wait) {
-        clearTimeout(timeout);
+        clearTimeout(timeout); // 消除计时器
         timeout = null;
         previous = now;
         result = func.apply(context, args);
         if (!timeout) context = args = null;
       } else if (!timeout && options.trailing !== false) {
-        timeout = setTimeout(later, remaining);
+        timeout = setTimeout(later, remaining); // 不停的覆盖, 直到最后一次才会调用
       }
       return result;
     };
@@ -905,19 +927,30 @@
   // be triggered. The function will be called after it stops being called for
   // N milliseconds. If `immediate` is passed, trigger the function on the
   // leading edge, instead of the trailing.
+  // 返回 function 函数的防反跳版本, 将延迟函数的执行(真正的执行)在函数最后一次调用时刻的 
+  // wait 毫秒之后. 对于必须在一些输入（多是一些用户操作）停止到达之后执行的行为有帮助。 
+  // 例如: 渲染一个Markdown格式的评论预览, 当窗口停止改变大小之后重新计算布局, 等等.
+  // 
+  // 传参 immediate 为 true， debounce会在 wait 时间间隔的开始调用这个函数 。
+  // 
+  // immediate: true
+  // 立即执行, 然后再也不会执行func
+  // 
+  // immediate: false
+  // 一直等待,直到func最后一次被触发的wait ms后,才会执行func
   _.debounce = function(func, wait, immediate) {
     var timeout, args, context, timestamp, result;
 
     var later = function() {
-      var last = _.now() - timestamp;
-
+      var last = _.now() - timestamp; // 如果func被重复的调用,timestamp就会被不停的刷新
+      // last <= 0 || last >= wait
       if (last < wait && last > 0) {
         timeout = setTimeout(later, wait - last);
       } else {
         timeout = null;
         if (!immediate) {
           result = func.apply(context, args);
-          if (!timeout) context = args = null;
+          if (!timeout) context = args = null; // TODO: 这里有必要判断timeout么?不是在判断之前都赋值null了么
         }
       }
     };
@@ -926,11 +959,11 @@
       context = this;
       args = arguments;
       timestamp = _.now();
-      var callNow = immediate && !timeout;
+      var callNow = immediate && !timeout; // 从这里可以看出来, immediate: true会使函数立即执行一次
       if (!timeout) timeout = setTimeout(later, wait);
       if (callNow) {
         result = func.apply(context, args);
-        context = args = null;
+        context = args = null; // 执行过之后重置变量
       }
 
       return result;
@@ -940,11 +973,15 @@
   // Returns the first function passed as an argument to the second,
   // allowing you to adjust arguments, run code before and after, and
   // conditionally execute the original function.
+  // 将第一个函数 function 封装到函数 wrapper 里面, 
+  // 并把函数 function 作为第一个参数传给 wrapper. 
+  // 这样可以让 wrapper 在 function 运行之前和之后 执行代码, 调整参数然后附有条件地执行.
   _.wrap = function(func, wrapper) {
     return _.partial(wrapper, func);
   };
 
   // Returns a negated version of the passed-in predicate.
+  // 返回一个新的predicate函数的否定版本。
   _.negate = function(predicate) {
     return function() {
       return !predicate.apply(this, arguments);
@@ -953,6 +990,8 @@
 
   // Returns a function that is the composition of a list of functions, each
   // consuming the return value of the function that follows.
+  // 返回函数集组合后的复合函数, 也就是一个函数执行完之后把返回的结果再作为参数赋
+  // 给下一个函数来执行. 以此类推. 在数学里, 把函数 f(), g(), 和 h() 组合起来可以得到复合函数 f(g(h()))。
   _.compose = function() {
     var args = arguments;
     var start = args.length - 1;
@@ -965,6 +1004,8 @@
   };
 
   // Returns a function that will only be executed after being called N times.
+  // 创建一个函数, 只有在运行了 times 次之后才有效果. 在处理同组异步请求返回结果时, 
+  // 如果你要确保同组里所有异步请求完成之后才 执行这个函数, 这将非常有用。
   _.after = function(times, func) {
     return function() {
       if (--times < 1) {
@@ -974,6 +1015,7 @@
   };
 
   // Returns a function that will only be executed before being called N times.
+  // 创建一个函数,调用不超过 times 次。 当count已经达到时，最后一个函数调用的结果 是被记住并返回 。
   _.before = function(times, func) {
     var memo;
     return function() {
@@ -988,6 +1030,8 @@
 
   // Returns a function that will be executed at most one time, no matter how
   // often you call it. Useful for lazy initialization.
+  // 创建一个只能调用一次的函数。重复调用改进的方法也没有效果，只会返回第一次执行时的结果。
+  // 作为初始化函数使用时非常有用, 不用再设一个boolean值来检查是否已经初始化完成.
   _.once = _.partial(_.before, 2);
 
   // Object Functions
