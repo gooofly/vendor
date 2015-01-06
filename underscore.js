@@ -1459,6 +1459,7 @@
   };
 
   // Run a function **n** times.
+  // 调用给定的迭代函数n次,每一次调用iteratee传递index参数。生成一个返回值的数组。 
   _.times = function(n, iteratee, context) {
     var accum = Array(Math.max(0, n));
     iteratee = createCallback(iteratee, context, 1);
@@ -1510,6 +1511,7 @@
 
   // If the value of the named `property` is a function then invoke it with the
   // `object` as context; otherwise, return it.
+  // 指定一个对象的属性, 返回该属性对应的值, 如果该属性对应的是一个函数, 则会执行该函数并返回结果
   _.result = function(object, property) {
     if (object == null) return void 0;
     var value = object[property];
@@ -1518,6 +1520,7 @@
 
   // Generate a unique integer id (unique within the entire client session).
   // Useful for temporary DOM ids.
+  // 生成一个唯一的整数id, 可以添加前缀
   var idCounter = 0;
   _.uniqueId = function(prefix) {
     var id = ++idCounter + '';
@@ -1560,9 +1563,12 @@
   // NB: `oldSettings` only exists for backwards compatibility.
   _.template = function(text, settings, oldSettings) {
     if (!settings && oldSettings) settings = oldSettings;
+    // 模板配置, 如果没有指定配置项, 则使用templateSettings中指定的配置项
     settings = _.defaults({}, settings, _.templateSettings);
 
     // Combine delimiters into one regular expression via alternation.
+    // 组合模板边界,生成一个新的正则表达式
+    // matcher = /<%-([\s\S]+?)%>|<%=([\s\S]+?)%>|<%([\s\S]+?)%>|$/g
     var matcher = RegExp([
       (settings.escape || noMatch).source,
       (settings.interpolate || noMatch).source,
@@ -1570,9 +1576,24 @@
     ].join('|') + '|$', 'g');
 
     // Compile the template source, escaping string literals appropriately.
+    // eg:
+    // var data = { name: 'gooofly', age: 25 };
+    // var tpl = '<div><h2><%= name %></h2><p><%- age %></p></div>';
+    // var tplFunc = _.template(tpl);
+    // 
     var index = 0;
+    // 1. 通过正则匹配把tpl模板分割成一个个的片段,并转译特殊字符.
+    // 2. 将模板标签替换成js代码段,转化后的结果如下
+    // source = "
+    // __p+='<div><h2>'+
+    // ((__t=( name ))==null?'':__t)+
+    // '</h2><p>'+
+    // ((__t=( age ))==null?'':_.escape(__t))+
+    // '</p></div>';
+    // "
     var source = "__p+='";
     text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
+      // 截取片段
       source += text.slice(index, offset).replace(escaper, escapeChar);
       index = offset + match.length;
 
@@ -1589,13 +1610,61 @@
     });
     source += "';\n";
 
+
+    // 3. 检测是否配置了setting.variable, 如果没有配置就给上面生成的js片段包裹作用域
+    // 默认的, template 通过 with 语句 来取得 data 所有的值. 
+    // 您也可以在 variable 设置里指定一个变量名. 这样能显著提升模板的渲染速度.
+    // 
     // If a variable is not specified, place data values in local scope.
+    // source = "
+    // with(obj||{}){
+    // __p+='<div><h2>'+
+    // ((__t=( name ))==null?'':__t)+
+    // '</h2><p>'+
+    // ((__t=( age ))==null?'':_.escape(__t))+
+    // '</p></div>';
+    // }
+    // "
     if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
 
+    // 4. 继续在js片段外围包裹变量申明和return语句
+    // 
+    // source = "
+    // var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+    // with(obj||{}){
+    // __p+='<div><h2>'+
+    // ((__t=( name ))==null?'':__t)+
+    // '</h2><p>'+
+    // ((__t=( age ))==null?'':_.escape(__t))+
+    // '</p></div>';
+    // }
+    // return __p;
+    // "
     source = "var __t,__p='',__j=Array.prototype.join," +
       "print=function(){__p+=__j.call(arguments,'');};\n" +
       source + 'return __p;\n';
 
+    // 5. 通过Function创建模板渲染函数
+    // 
+    // render = function ( obj, _ ) {
+    // var
+    //   __t,
+    //   __p='',
+    //   __j=Array.prototype.join,
+    //   print = function () {
+    //     __p += __j.call( arguments, '' );
+    //   };
+    //  
+    // with ( obj || {} ) {
+    //   __p+='<div><h2>'+
+    //   ((__t=( name ))==null?'':__t)+
+    //   '</h2><p>'+
+    //   ((__t=( age ))==null?'':_.escape(__t))+
+    //   '</p></div>';
+    // }
+    // 
+    // return __p;
+    // }
     try {
       var render = new Function(settings.variable || 'obj', '_', source);
     } catch (e) {
@@ -1611,6 +1680,7 @@
     var argument = settings.variable || 'obj';
     template.source = 'function(' + argument + '){\n' + source + '}';
 
+    // 返回编译后的模板渲染函数
     return template;
   };
 
