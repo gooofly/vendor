@@ -1696,39 +1696,56 @@
   // If Underscore is called as a function, it returns a wrapped object that
   // can be used OO-style. This wrapper holds altered versions of all the
   // underscore functions. Wrapped objects may be chained.
+  // 
+  // underscore的链式写法通过_.chain中的_chain属性控制,设置为true表示采用链式写法.
+  // 通过_.mixin将_上的静态方法包装后复制到_的原型对象上
+  // 然后私有方法result通过检查_chain属性来返回_()包装对象来达到链式写法的目的
+  // 
 
   // Helper function to continue chaining intermediate results.
+  // 用于协助函数继续使用链式写法. 当链式写法开关被打开时,返回_实例, 否则返回原对象µ
   var result = function(obj) {
     return this._chain ? _(obj).chain() : obj;
   };
 
   // Add your own custom functions to the Underscore object.
+  // 将自定义函数添加到underscore对象和原型对象上
   _.mixin = function(obj) {
     _.each(_.functions(obj), function(name) {
       var func = _[name] = obj[name];
+      // 将函数改造后复制到_的原型对象上面.
       _.prototype[name] = function() {
-        var args = [this._wrapped];
-        push.apply(args, arguments);
+        var args = [this._wrapped]; // 原参数被挂到_wrapped下面
+        push.apply(args, arguments); // 合并参数
+        // 执行相应函数,并使用私有的result实现链式调用
         return result.call(this, func.apply(_, args));
       };
     });
   };
 
   // Add all of the Underscore functions to the wrapper object.
+  // 将_的静态方法复制到_的原型对象上去
   _.mixin(_);
 
   // Add all mutator Array functions to the wrapper.
+  // 将部分原生的数组方法复制到_的原型对象上去,并且支持链式写法
+  // 因此_的实例对象也能够直接调用原生数组方法
   _.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
     var method = ArrayProto[name];
     _.prototype[name] = function() {
       var obj = this._wrapped;
       method.apply(obj, arguments);
+      // IE bugs with splice() and shift(), failing to remove the 0 indexed value, when using an array-like-object with _(...).
+      // look to [issues #397](https://github.com/jashkenas/underscore/issues/397)
       if ((name === 'shift' || name === 'splice') && obj.length === 0) delete obj[0];
-      return result.call(this, obj);
+      return result.call(this, obj); // 使支持链式操作
     };
   });
 
   // Add all accessor Array functions to the wrapper.
+  // 作用同于上一段代码, 将数组中的一些方法添加到Underscore对象, 并支持了方法链操作
+  // 区别在于上一段代码所添加的函数, 均返回Array对象本身(也可能是封装后的Array), 
+  // concat, join, slice方法将返回一个新的Array对象(也可能是封装后的Array)
   _.each(['concat', 'join', 'slice'], function(name) {
     var method = ArrayProto[name];
     _.prototype[name] = function() {
@@ -1737,6 +1754,7 @@
   });
 
   // Extracts the result from a wrapped and chained object.
+  // 返回被封装的_对象的原始值(存放在_wrapped属性中)
   _.prototype.value = function() {
     return this._wrapped;
   };
