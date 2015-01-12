@@ -77,6 +77,7 @@
   // Internal function that returns an efficient (for current engines) version
   // of the passed-in callback, to be repeatedly applied in other Underscore
   // functions.
+  // 内部函数, 用来生成不同形式参数的函数
   var createCallback = function(func, context, argCount) {
     if (context === void 0) return func;
     switch (argCount == null ? 3 : argCount) {
@@ -101,7 +102,7 @@
   // A mostly-internal function to generate callbacks that can be applied
   // to each element in a collection, returning the desired result — either
   // identity, an arbitrary callback, a property matcher, or a property accessor.
-  // 一个重要的内部函数用来生成可应用到集合中每个元素的回调， 
+  // 一个重要的内部函数, 用来生成可应用到集合中每个元素的回调， 
   // 返回想要的结果 - 无论是等式，任意回调，属性匹配，或属性访问。 
   _.iteratee = function(value, context, argCount) {
     if (value == null) return _.identity;

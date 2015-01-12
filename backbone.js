@@ -36,17 +36,18 @@
 
   // Save the previous value of the `Backbone` variable, so that it can be
   // restored later on, if `noConflict` is used.
-  // 定义变量，保存原来的Backbone的值
+  // 保存原来的Backbone的值, 可供`noConflict`使用
   var previousBackbone = root.Backbone;
 
   // Create local references to array methods we'll want to use later.
-  // 定义对常用数组方法的引用
+  // 创建对原生数组方法的本地引用, 以方便后面调用.
   var array = [];
   var push = array.push;
   var slice = array.slice;
   var splice = array.splice;
 
   // Current version of the library. Keep in sync with `package.json`.
+  // 代码库的当前版本, 需要和`package.json`保持同步.
   Backbone.VERSION = '1.1.2';
 
   // For Backbone's purposes, jQuery, Zepto, Ender, or My Library (kidding) owns
@@ -55,6 +56,7 @@
 
   // Runs Backbone.js in *noConflict* mode, returning the `Backbone` variable
   // to its previous owner. Returns a reference to this Backbone object.
+  // 放弃以"Backbone"命名框架, 并返回Backbone对象, 一般用于避免命名冲突或规范命名方式
   Backbone.noConflict = function() {
     root.Backbone = previousBackbone;
     return this;
@@ -63,15 +65,17 @@
   // Turn on `emulateHTTP` to support legacy HTTP servers. Setting this option
   // will fake `"PATCH"`, `"PUT"` and `"DELETE"` requests via the `_method` parameter and
   // set a `X-Http-Method-Override` header.
-  // 打开 'emulateHTTP'(仿HTTP？)以支持老的HTTP服务。设置这个配置项会通过'_method'参数
-  // 模拟 'PATCH', 'PUT', 'DELETE'请求，并且设置一个 'X-Http-Method-Override'头
+  // 对于不支持REST方式的浏览器, 可以设置Backbone.emulateHTTP = true
+  // 设置这个配置项会通过'_method'参数模拟 'PATCH', 'PUT', 'DELETE'请求，
+  // 同时也将发送'X-Http-Method-Override'头信息.
   Backbone.emulateHTTP = false;
 
   // Turn on `emulateJSON` to support legacy servers that can't deal with direct
   // `application/json` requests ... will encode the body as
   // `application/x-www-form-urlencoded` instead and will send the model in a
   // form param named `model`.
-  // 用来兼容老的、不支持JSON服务的环境
+  // 对于不支持application/json编码的浏览器, 可以设置Backbone.emulateJSON = true;
+  // 将请求类型设置为application/x-www-form-urlencoded, 并将数据放置在model参数中实现兼容
   Backbone.emulateJSON = false;
 
   // Backbone.Events
@@ -81,8 +85,8 @@
   // custom events. You may bind with `on` or remove with `off` callback
   // functions to an event; `trigger`-ing an event fires all callbacks in
   // succession.
-  // 这个模块可以被混入到任何其它的对象当中，使他们支持自定义事件。你可以通过on来
-  // 绑定事件，通过off来解除绑定。可以通过trigger方法来手动触发事件。
+  // 这个模块可以被其它任何对象继承，使他们支持自定义事件。你可以通过on来
+  // 绑定事件，通过off来解除绑定, 当事件完成时通过trigger方法来触发事件。
   //
   //     var object = {};
   //     _.extend(object, Backbone.Events);
@@ -93,7 +97,8 @@
 
     // Bind an event to a `callback` function. Passing `"all"` will bind
     // the callback to all events fired.
-    // 把一个回调函数绑定到事件上。事件名传入'all'会把回调函数绑定到所有事件上去
+    // 把一个回调函数绑定到事件上。事件名传入'all'会把回调函数绑定到所有事件上去.
+    // 
     // note: 实际上绑定事件的方式就是创建一个以事件名为key的hash，如下结构：
     // _events: {
     //    change: [
@@ -117,32 +122,35 @@
       // 如果name是'change blur'或{change: callback}这种写法，会在eventsApi里面循环调用on方法
       // eventsApi方法返回true则说明是第一种参数写法，继续判断callback，若callback未传值，则直接return。
       if (!eventsApi(this, 'on', name, [callback, context]) || !callback) return this; 
+      // this._events若不存在则初始化. --- this._events对象用于存放已注册的事件和回调函数
       this._events || (this._events = {});
-      // this._events = this._events || {}; 我个人喜欢这样写，更易理解，还能不让jshint报warning，还省2字节！
+      // this._events = this._events || {}; 相比较而言,这种写法更加的耗时
       var events = this._events[name] || (this._events[name] = []);
       // 把事件监听器放到一个专门放置事件监听器的对象_events中，供需要的时候调用
-      events.push({callback: callback, context: context, ctx: context || this}); // context 和 ctx ？？
+      // context用于解绑事件时对context进行对比, ctx用于触发时绑定作用域上下文
+      events.push({callback: callback, context: context, ctx: context || this});
       return this;
     },
 
     // Bind events to only be triggered a single time. After the first time
     // the callback is invoked, it will be removed.
-    // 绑定一个只会被触发一次的事件监听器
+    // 绑定一个只会被触发一次的事件监听器, 在callback被调用后,将会移除事件
     once: function(name, callback, context) {
       if (!eventsApi(this, 'once', name, [callback, context]) || !callback) return this;
       var self = this;
       var once = function() { // https://github.com/jashkenas/backbone/issues/3200
-        self.off(name, once); // 在函数调用的时候，移除事件监听
-        callback.apply(this, arguments); // 调用callback
+        self.off(name, once); // 在callback执行前，移除事件监听
+        callback.apply(this, arguments); // 执行callback
       };
-      once._callback = callback; // 保存原来的callback，在Events.off的时候用来匹配callback
+      // 保存原来的callback，在Events.off的时候用来匹配callback
+      once._callback = callback; 
       return this.on(name, once, context);
     },
 
-    // Remove one or many callbacks. If `context` is null, removes all
-    // callbacks with that function. If `callback` is null, removes all
-    // callbacks for the event. If `name` is null, removes all bound
-    // callbacks for all events.
+    // Remove one or many callbacks. 
+    // If `context` is null, removes all callbacks with that function. 
+    // If `callback` is null, removes all callbacks for the event. 
+    // If `name` is null, removes all bound callbacks for all events.
     off: function(name, callback, context) {
       var retain, ev, events, names, i, l, j, k;
       // 如果_events未定义，则说明还没有事件监听器被注册，直接返回
@@ -152,21 +160,27 @@
         this._events = void 0;
         return this;
       }
-      // _.keys(this._events)用来取出_events对象里面的所有属性名称，ES5里面有个Object.keys方法作用一样
+      // _.keys(this._events)用来取出_events对象里面的所有事件名称，ES5里面有个Object.keys方法作用一样
       names = name ? [name] : _.keys(this._events);
       for (i = 0, l = names.length; i < l; i++) {
         name = names[i];
         if ( events = this._events[name] ) {
           this._events[name] = retain = [];  // 先清空数组
-          if (callback || context) { // 看是否提供了callback或context参数
+          if (callback || context) { // 看是否提供了callback或context参数, 没有提供则直接移除所有eventName事件
             for (j = 0, k = events.length; j < k; j++) {
               ev = events[j];
+              // !callback || callback === ev.callbck || callback === ev.callbck._callback
+              // !context || context === ev.context
+              // 1. 当callback未传入, 或者虽然已传入callback但callback和绑定时的callback不能对应
+              // 2. 当context未传入, 或者虽然已传入context但context和绑定时的context不能对应
+              // 1 2 中的任意一种情况满足都表示这个事件不该被移除
               if ((callback && callback !== ev.callback && callback !== ev.callback._callback) ||
                   (context && context !== ev.context)) {
                 retain.push(ev); // 排除不匹配的callback，重新push回数组中
               }
             }
           }
+          // 如果事件对应的callback都被移除了,则移除对这个事件的绑定.
           if (!retain.length) delete this._events[name];
         }
       }
@@ -178,12 +192,18 @@
     // passed the same arguments as `trigger` is, apart from the event name
     // (unless you're listening on `"all"`, which will cause your callback to
     // receive the true name of the event as the first argument).
+    // 触发一个, 多个, 所有绑定事件. callback能获得所有传递给trigger的参数(除了事件名).
+    // 如果我们注册了'all'事件，那么在触发任何事件的时候，'all'都会被触发, 
+    // 并且被触发事件的事件名也会作为参数传递给callback
     trigger: function(name) {
       if (!this._events) return this;
       var args = slice.call(arguments, 1);
+      // 根据传入参数的不同形式做
       if (!eventsApi(this, 'trigger', name, args)) return this;
       var events = this._events[name];
-      var allEvents = this._events.all; // Callbacks bound to the special "all" event will be triggered when any event occurs, 
+      // Callbacks bound to the special "all" event will be triggered when any event occurs, 
+      // 任何事件触发都会触发`all`事件
+      var allEvents = this._events.all; 
       if (events) triggerEvents(events, args); // 调用私有函数triggerEvents来调用事件监听函数
       if (allEvents) triggerEvents(allEvents, arguments);
       return this;
@@ -191,15 +211,26 @@
 
     // Tell this object to stop listening to either specific events ... or
     // to every object it's currently listening to.
+    // 
+    // 告诉obj对象停止对指定事件的监听,
+    // 
+    // 这个方法比较简单，在使用listenTo和listenToOnce的时候会把被listen的object存放到this._listeningTo对象中，
+    // 当调用stopListening方法就会从_listeningTo对象中取出相应的对象，
+    // 进行事件监听器的off处理，必要的时候从_listeningTo对象中移除该object。
     stopListening: function(obj, name, callback) {
       var listeningTo = this._listeningTo;
+      // 如果this._listeningTo不存在, 说明没有对象被监听, 直接返回
       if (!listeningTo) return this;
-      var remove = !name && !callback; // 如果只有一个参数，则remove = true
+      // 如果只有一个参数，则remove = true
+      var remove = !name && !callback; 
       if (!callback && typeof name === 'object') callback = this; // 不同形式参数处理
-      if (obj) (listeningTo = {})[obj._listenId] = obj; // 如果提供了obj参数，对obj进行处理；否则，移除所有
+      // 如果提供了obj参数，对listeningTo进行处理, 使它能兼容for in循环的写法；否则，移除所有
+      if (obj) (listeningTo = {})[obj._listenId] = obj;
       for (var id in listeningTo) {
         obj = listeningTo[id];
-        obj.off(name, callback, this);
+        obj.off(name, callback, this); // 解除对象上的事件绑定
+        // 如果没有传入事件名和callback, 或者对象上已经没有被绑定的事件, 那么解除对对象的监听,
+        // 并从this._listeningTo中移除
         if (remove || _.isEmpty(obj._events)) delete this._listeningTo[id];
       }
       return this;
@@ -208,6 +239,7 @@
   };
 
   // Regular expression used to split event strings.
+  // 正则表达式, 用来分割这种('eventName1 eventName2')写法的事件名
   var eventSplitter = /\s+/;
 
   // Implement fancy features of the Events API such as multiple event
@@ -221,16 +253,18 @@
   var eventsApi = function(obj, action, name, rest) {
     if (!name) return true; // 如果name 参数为空
 
-    // Handle event maps. 如果是第3种写法
+    // Handle event maps. 
+    // 如果是第3种写法
     if (typeof name === 'object') {
       for (var key in name) {
+        // 遍历对象, 分别绑定每一个事件
         obj[action].apply(obj, [key, name[key]].concat(rest));
       }
       return false;
     }
 
     // Handle space separated event names.
-    // 如果是第2种写法
+    // 如果是第2种('eventName1 eventName2')写法
     if (eventSplitter.test(name)) {
       var names = name.split(eventSplitter);
       for (var i = 0, l = names.length; i < l; i++) {
@@ -248,7 +282,8 @@
   var triggerEvents = function(events, args) {
     var ev, i = -1, l = events.length, a1 = args[0], a2 = args[1], a3 = args[2];
     // 虽然难以相信，但却是为了性能考虑。多数Backbone内部方法触发事件时会传3个参数，即会使用call（而非apply）。
-    // 按此推理，call的性能较apply要高。搜关键字 "call apply performance"， 貌似印证了这个说法 http://www.cnblogs.com/snandy/archive/2013/05/23/3091258.html
+    // 按此推理，call的性能较apply要高。搜关键字 "call apply performance"， 
+    // 貌似印证了这个说法 http://www.cnblogs.com/snandy/archive/2013/05/23/3091258.html
     switch (args.length) { // 冗余换性能。
       case 0: while (++i < l) (ev = events[i]).callback.call(ev.ctx); return;
       case 1: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1); return;
@@ -273,7 +308,7 @@
       // 取出/创建`this._listeningTo`(这个对象用来存放Obj)
       var listeningTo = this._listeningTo || (this._listeningTo = {});
       var id = obj._listenId || (obj._listenId = _.uniqueId('l')); // 为obj生成一个全局唯一的id
-      listeningTo[id] = obj;
+      listeningTo[id] = obj; // 对象以唯一标识符作为key, 保存在this._listeningTo中
       if (!callback && typeof name === 'object') callback = this; // 参数处理
       obj[implementation](name, callback, this); // 注册事件监听器
       return this;
@@ -295,24 +330,38 @@
     // frequently representing a row in a table in a database on your server.
     // A discrete chunk of data and a bunch of useful, related methods for
     // performing computations and transformations on that data.
+    // 
+    // Model是Backbone中所有数据对象模型的基类, 一般情况下, 它对应于服务器端数据库表中的"行".
+    // Model用于存放数据和一些用于对数据进行计算, 转化等其它处理的方法
 
   // Create a new model with the specified attributes. A client id (`cid`)
   // is automatically generated and assigned for you.
+  // 用来实例化一个Model, 可以传入指定属性.
+  // 自动生成一个唯一标识符(前缀 "c" ), 并分配给实例对象
   var Model = Backbone.Model = function(attributes, options) {
     var attrs = attributes || {};
     options || (options = {});
     this.cid = _.uniqueId('c'); // automatically generated and assigned a client id
+    // Backbone 中, 实例化后的模型对象所有属性都保存在一个名为 attribues 的对象中,
+    // 对象的 set 或 get 方法都是围绕该对象进行存取的
     this.attributes = {};
     if (options.collection) this.collection = options.collection; // TODO:?
-    if (options.parse) attrs = this.parse(attrs, options) || {}; // If `{parse: true}` is passed as an option, the attributes will first be converted by parse before being set on the model.
+    // If `{parse: true}` is passed as an option, 
+    // the attributes will first be converted by parse before being set on the model.
+    // 如果创建Model时配置项设置了 `{parse: true}`, 那么会通过 `parse` 方法处理属性
+    if (options.parse) attrs = this.parse(attrs, options) || {}; 
+    // this.defaults属性/方法用来设置默认值, 下面这个月语句的作用是, 用默认值来填充属性, 如果该属性未设置
     attrs = _.defaults({}, attrs, _.result(this, 'defaults'));
+    // 
     this.set(attrs, options);
-    this.changed = {}; // 用来保存被改变的属性
-    this.initialize.apply(this, arguments); // Initialization
+    // 用来保存被改变的属性
+    this.changed = {};
+    // Initialization 调用 `this.initialize`,进行初始化, 一般在继承Model类的时候, 我们需要覆写这个方法
+    this.initialize.apply(this, arguments);
   };
 
   // Attach all inheritable methods to the Model prototype.
-  // 为Model原型对象添加方法、属性
+  // 为Model原型对象添加方法、属性, Model继承Events对象.
   _.extend(Model.prototype, Events, {
 
     // A hash of attributes whose current and previous value differ.
@@ -320,7 +369,7 @@
     changed: null,
 
     // The value returned during the last failed validation.
-    // validation验证错误时
+    // validation验证错误时的提示信息
     validationError: null,
 
     // The default name for the JSON `id` attribute is `"id"`. MongoDB and
@@ -329,6 +378,7 @@
 
     // Initialize is an empty function by default. Override it with your own
     // initialization logic.
+    // 默认的Initialize是一个空函数, 在继承Model是可以把初始化逻辑写到这个函数里
     initialize: function(){},
 
     // Return a copy of the model's `attributes` object.
@@ -388,8 +438,8 @@
 
       // Extract attributes and options.
       // 提取属性
-      unset           = options.unset;
-      silent          = options.silent;
+      unset           = options.unset; // unset 表示是否是删除属性
+      silent          = options.silent; // 是否为静默模式, 静默模式不触发任何事件
       changes         = [];
       changing        = this._changing; // 是否正在设置属性
       this._changing  = true;
@@ -406,7 +456,9 @@
       // For each `set` attribute, update or delete the current value.
       for (attr in attrs) {
         val = attrs[attr];
+        // 如果新值和旧值不同, 则将该值得 key 存入 `changes` 数组, 该数组用于触发 `change:key` 事件
         if (!_.isEqual(current[attr], val)) changes.push(attr);
+        // 如果新值
         if (!_.isEqual(prev[attr], val)) {
           this.changed[attr] = val;
         } else {
@@ -428,7 +480,8 @@
       // be recursively nested within `"change"` events.
       if (changing) return this;
       if (!silent) {
-        while (this._pending) { // 为了防止嵌套设属性的时候重复trigger，参照这个[test](https://github.com/jashkenas/backbone/pull/2022)
+        // 为了防止嵌套设属性的时候重复trigger，参照这个[test](https://github.com/jashkenas/backbone/pull/2022)
+        while (this._pending) { 
           options = this._pending;
           this._pending = false;
           this.trigger('change', this, options);
@@ -674,11 +727,11 @@
   // -------------------
 
   // If models tend to represent a single row of data, a Backbone Collection is
-  // more analagous to a table full of data ... or a small slice or page of that
+  // more analogous to a table full of data ... or a small slice or page of that
   // table, or a collection of rows that belong together for a particular reason
   // -- all of the messages in this particular folder, all of the documents
   // belonging to this particular author, and so on. Collections maintain
-  // indexes of their models, both in order, and for lookup by `id`.
+  // indexes of their models, both in order, and for lookup by `id`. 508090
 
   // Create a new **Collection**, perhaps to contain a specific type of `model`.
   // If a `comparator` is specified, the Collection will maintain
@@ -686,8 +739,9 @@
   var Collection = Backbone.Collection = function(models, options) {
     options || (options = {});
     if (options.model) this.model = options.model;
+    // 配置是否对 `Model` 进行排序
     if (options.comparator !== void 0) this.comparator = options.comparator;
-    this._reset();
+    this._reset(); // 重置内部变量
     this.initialize.apply(this, arguments);
     if (models) this.reset(models, _.extend({silent: true}, options));
   };
@@ -1082,6 +1136,7 @@
   var View = Backbone.View = function(options) {
     this.cid = _.uniqueId('view');
     options || (options = {});
+    // 过滤 options 对象中的属性, 只有 viewOptions 中列出的属性才有效
     _.extend(this, _.pick(options, viewOptions));
     this._ensureElement();
     this.initialize.apply(this, arguments);
@@ -1151,12 +1206,14 @@
     // This only works for delegate-able events: not `focus`, `blur`, and
     // not `change`, `submit`, and `reset` in Internet Explorer.
     delegateEvents: function(events) {
+      // 如果没有传入 events 参数, 并且实例对象没有 events属性, 则直接返回
       if (!(events || (events = _.result(this, 'events')))) return this;
       this.undelegateEvents();
       for (var key in events) {
         var method = events[key];
+        // TODO: if (!_.isFunction(method)) method = this[method];
         if (!_.isFunction(method)) method = this[events[key]];
-        if (!method) continue;
+        if (!method) continue; // 如果没传入函数, 调过
 
         var match = key.match(delegateEventSplitter);
         var eventName = match[1], selector = match[2];
@@ -1174,6 +1231,8 @@
     // Clears all callbacks previously bound to the view with `delegateEvents`.
     // You usually don't need to use this, but may wish to if you have multiple
     // Backbone views attached to the same DOM element.
+    // 清除所有通过 `delegateEvents` 命名空间绑定在 view 上的事件. 通常你并不需要用到这个方法,
+    // 除非, 你在同一个 DOM 上绑定了多个 Backbone View.
     undelegateEvents: function() {
       this.$el.off('.delegateEvents' + this.cid);
       return this;
@@ -1183,14 +1242,19 @@
     // If `this.el` is a string, pass it through `$()`, take the first
     // matching element, and re-assign it to `el`. Otherwise, create
     // an element from the `id`, `className` and `tagName` properties.
+    // 
+    // 确保有一个 DOM 元素能作为容器渲染 View.
+    // 
     _ensureElement: function() {
       if (!this.el) {
         var attrs = _.extend({}, _.result(this, 'attributes'));
         if (this.id) attrs.id = _.result(this, 'id');
+        // 因为 `class` 是保留字, 所以不能直接用 `.` 操作符去取值
         if (this.className) attrs['class'] = _.result(this, 'className');
         var $el = Backbone.$('<' + _.result(this, 'tagName') + '>').attr(attrs);
         this.setElement($el, false);
       } else {
+        // TODO: 我觉得这里不再需要写 `_.result(this, 'el')` 了, 因为 this 上面没有 el 属性啊,,,
         this.setElement(_.result(this, 'el'), false);
       }
     }
@@ -1216,6 +1280,7 @@
   // Useful when interfacing with server-side languages like **PHP** that make
   // it difficult to read the body of `PUT` requests.
   Backbone.sync = function(method, model, options) {
+    // 根据CRUD方法名定义与服务器交互的方法(POST, GET, PUT, DELETE)
     var type = methodMap[method];
 
     // Default options, unless specified.
@@ -1225,28 +1290,43 @@
     });
 
     // Default JSON-request options.
+    // params将作为请求参数对象传递给第三方库的$.ajax方法
     var params = {type: type, dataType: 'json'};
 
     // Ensure that we have a URL.
+    // 如果在发送请求时没有在options中设置url地址, 将会通过 model 对象的url属性或方法来获取url
+    // model 所获取url的方式可参考 model 的url方法
     if (!options.url) {
       params.url = _.result(model, 'url') || urlError();
     }
 
     // Ensure that we have the appropriate request data.
-    if (options.data == null && model && (method === 'create' || method === 'update' || method === 'patch')) {
+    // 如果调用 create, update 和 patch 方法, 且没有在options中定义请求数据, 
+    // 将序列化模型中的数据对象传递给服务器
+    if (options.data == null && model && 
+        (method === 'create' || method === 'update' || method === 'patch')) {
       params.contentType = 'application/json';
+      // 序列化模型中的数据, 并作为请求数据传递给服务器
       params.data = JSON.stringify(options.attrs || model.toJSON(options));
     }
 
     // For older servers, emulate JSON by encoding the request into an HTML-form.
+    // 对于不支持application/json编码的浏览器, 可以通过设置Backbone.emulateJSON参数为true实现兼容
     if (options.emulateJSON) {
+      // 不支持Backbone.emulateJSON编码的浏览器, 将类型设置为application/x-www-form-urlencoded
       params.contentType = 'application/x-www-form-urlencoded';
+      // 将需要同步的数据存放在key为"model"参数中发送到服务器
       params.data = params.data ? {model: params.data} : {};
     }
 
     // For older servers, emulate HTTP by mimicking the HTTP method with `_method`
     // And an `X-HTTP-Method-Override` header.
-    if (options.emulateHTTP && (type === 'PUT' || type === 'DELETE' || type === 'PATCH')) {
+    // 对于不支持REST方式的浏览器, 可以设置Backbone.emulateHTTP参数为true, 
+    // 以POST方式发送数据, 并在数据中加入_method参数标识操作名称
+    // 同时也将发送X-HTTP-Method-Override头信息
+    if (options.emulateHTTP && 
+        (type === 'PUT' || type === 'DELETE' || type === 'PATCH')) {
+
       params.type = 'POST';
       if (options.emulateJSON) params.data._method = type;
       var beforeSend = options.beforeSend;
@@ -1257,7 +1337,10 @@
     }
 
     // Don't process data on a non-GET request.
+    // 对非GET方式的请求, 将不对数据进行转换, 因为传递的数据可能是一个JSON映射
     if (params.type !== 'GET' && !options.emulateJSON) {
+      // 通过设置processData为false来关闭数据转换
+      // processData参数是$.ajax方法中的配置参数, 详细信息可参考jQuery或Zepto相关文档
       params.processData = false;
     }
 
@@ -1347,6 +1430,7 @@
 
     // Execute a route handler with the provided parameters.  This is an
     // excellent place to do pre-route setup or post-route cleanup.
+    // 调用路由对应的函数 (controller)
     execute: function(callback, args) {
       if (callback) callback.apply(this, args);
     },
@@ -1360,6 +1444,7 @@
     // Bind all defined routes to `Backbone.history`. We have to reverse the
     // order of the routes here to support behavior where the most general
     // routes can be defined at the bottom of the route map.
+    // 把所有路由存储到 `Backbone.history`
     _bindRoutes: function() {
       if (!this.routes) return;
       this.routes = _.result(this, 'routes');
@@ -1371,6 +1456,7 @@
 
     // Convert a route string into a regular expression, suitable for matching
     // against the current location hash.
+    // 把字符串形式的 route 转化成正则表达式.
     _routeToRegExp: function(route) {
       route = route.replace(escapeRegExp, '\\$&')
                    .replace(optionalParam, '(?:$1)?')
@@ -1403,6 +1489,7 @@
   // [onhashchange](https://developer.mozilla.org/en-US/docs/DOM/window.onhashchange)
   // and URL fragments. If the browser supports neither (old IE, natch),
   // falls back to polling.
+  // 创建跨浏览器的 history.
   var History = Backbone.History = function() {
     this.handlers = [];
     _.bindAll(this, 'checkUrl');
@@ -1437,6 +1524,7 @@
 
     // The default interval to poll for hash changes, if necessary, is
     // twenty times a second.
+    // 轮询事件间隙
     interval: 50,
 
     // Are we at the app root?
