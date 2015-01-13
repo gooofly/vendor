@@ -1540,6 +1540,8 @@
 
     // Gets the true hash value. Cannot use location.hash directly due to bug
     // in Firefox where location.hash will always be decoded.
+    // 获取 hash 的值, 不能直接使用 `location.hash` 是因为 Firefox 总是会
+    // 返回编码后的值
     getHash: function(window) {
       var match = (window || this).location.href.match(/#(.*)$/);
       return match ? match[1] : '';
