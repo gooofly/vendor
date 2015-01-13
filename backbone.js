@@ -1502,24 +1502,30 @@
   };
 
   // Cached regex for stripping a leading hash/slash and trailing space.
+  // 正则表达式,用于匹配头部的 `#` 或 `/`, 或者匹配尾部的空字符
   var routeStripper = /^[#\/]|\s+$/g;
 
   // Cached regex for stripping leading and trailing slashes.
+  // 正则表达式,用于匹配 hash 头尾的斜杠
   var rootStripper = /^\/+|\/+$/g;
 
   // Cached regex for detecting MSIE.
+  // 正则表达式,用于检测是否是 IE
   var isExplorer = /msie [\w.]+/;
 
   // Cached regex for removing a trailing slash.
+  // 正则表达式,用于删除 URL 尾部的 `/`
   var trailingSlash = /\/$/;
 
   // Cached regex for stripping urls of hash.
+  // 正则表达式,用于分离 URL 中的 hash 部分
   var pathStripper = /#.*$/;
 
   // Has the history handling already been started?
   History.started = false;
 
   // Set up all inheritable **Backbone.History** properties and methods.
+  // 设置所有可继承的属性和方法(即:原型属性和方法)
   _.extend(History.prototype, Events, {
 
     // The default interval to poll for hash changes, if necessary, is
