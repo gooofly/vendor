@@ -1182,7 +1182,7 @@
   // 用 object作为参数来调用函数interceptor，然后返回object。
   // 这种方法的主要意图是作为函数链式调用 的一环, 为了对此对象执行操作并返回对象本身。
   _.tap = function(obj, interceptor) {
-    interceptor(obj);
+    interceptor(obj); 
     return obj;
   };
 

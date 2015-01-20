@@ -1213,7 +1213,7 @@
         var method = events[key];
         // TODO: if (!_.isFunction(method)) method = this[method];
         if (!_.isFunction(method)) method = this[events[key]];
-        if (!method) continue; // 如果没传入函数, 调过
+        if (!method) continue; // 如果没传入函数, 跳过
 
         var match = key.match(delegateEventSplitter);
         var eventName = match[1], selector = match[2];
@@ -1385,17 +1385,20 @@
   // matched. Creating a new one sets its `routes` hash, if not set statically.
   var Router = Backbone.Router = function(options) {
     options || (options = {});
+    // options.routes 可以是一个 {}, 也可以是一个返回{}的function
     if (options.routes) this.routes = options.routes;
-    this._bindRoutes();
+    this._bindRoutes(); // 绑定通过配置项  `routes` 配置的路由
     this.initialize.apply(this, arguments);
   };
 
   // Cached regular expressions for matching named param parts and splatted
   // parts of route strings.
-  var optionalParam = /\((.*?)\)/g;
-  var namedParam    = /(\(\?)?:\w+/g;
-  var splatParam    = /\*\w+/g;
-  var escapeRegExp  = /[\-{}\[\]+?.,\\\^$|#\s]/g;
+  // 
+  // var str = '*hello (?:dog) hello(gooofly) :cat'
+  var optionalParam = /\((.*?)\)/g; // 匹配 `(?:dog)` adn `(gooofly)`
+  var namedParam    = /(\(\?)?:\w+/g; // 匹配 `(?:dog` and `:cat`
+  var splatParam    = /\*\w+/g; // 匹配 `*hello`
+  var escapeRegExp  = /[\-{}\[\]+?.,\\\^$|#\s]/g; // 匹配 `-{}[]+?.,\^$|# ` 之一
 
   // Set up all inheritable **Backbone.Router** properties and methods.
   _.extend(Router.prototype, Events, {
@@ -1409,20 +1412,25 @@
     //     this.route('search/:query/p:num', 'search', function(query, num) {
     //       ...
     //     });
-    //
+    // 动态修改url中hash属性的匹配规则和动作函数
     route: function(route, name, callback) {
+      // 把非正则的路由转换成正则
       if (!_.isRegExp(route)) route = this._routeToRegExp(route);
-      if (_.isFunction(name)) {
+      if (_.isFunction(name)) { // 如果 name 是 function, 交换参数
         callback = name;
         name = '';
       }
+      // 如果没有传 callback 则,说明 callback 在实例对象上, 通过 name 去取
       if (!callback) callback = this[name];
       var router = this;
       Backbone.history.route(route, function(fragment) {
-        var args = router._extractParameters(route, fragment);
-        router.execute(callback, args);
+        var args = router._extractParameters(route, fragment); // 从url中抽取参数
+        router.execute(callback, args); // 执行路由对应的 action
+        // 触发相对应的 route 事件(如果有绑定)
         router.trigger.apply(router, ['route:' + name].concat(args));
+        // 触发 route 事件
         router.trigger('route', name, args);
+
         Backbone.history.trigger('route', router, name, args);
       });
       return this;
@@ -1436,6 +1444,8 @@
     },
 
     // Simple proxy to `Backbone.history` to save a fragment into the history.
+    // 自动跳转到指定的hash属性中,并通过方法中的配置对象设置是否执行与hash匹配
+    // 规则对应的动作函数.
     navigate: function(fragment, options) {
       Backbone.history.navigate(fragment, options);
       return this;
@@ -1447,9 +1457,9 @@
     // 把所有路由存储到 `Backbone.history`
     _bindRoutes: function() {
       if (!this.routes) return;
-      this.routes = _.result(this, 'routes');
-      var route, routes = _.keys(this.routes);
-      while ((route = routes.pop()) != null) {
+      this.routes = _.result(this, 'routes'); // 提取 new 时配置的routes属性
+      var route, routes = _.keys(this.routes); // 提取所有路由
+      while ((route = routes.pop()) != null) { // 遍历, 绑定路由
         this.route(route, this.routes[route]);
       }
     },
@@ -1458,8 +1468,8 @@
     // against the current location hash.
     // 把字符串形式的 route 转化成正则表达式.
     _routeToRegExp: function(route) {
-      route = route.replace(escapeRegExp, '\\$&')
-                   .replace(optionalParam, '(?:$1)?')
+      route = route.replace(escapeRegExp, '\\$&') // 替换 `-{}[]+?.,\^$|# ` 中的字符为 `\\$&`
+                   .replace(optionalParam, '(?:$1)?') // 替换括号
                    .replace(namedParam, function(match, optional) {
                      return optional ? match : '([^/?]+)';
                    })
@@ -1470,6 +1480,7 @@
     // Given a route, and a URL fragment that it matches, return the array of
     // extracted decoded parameters. Empty or unmatched parameters will be
     // treated as `null` to normalize cross-browser behavior.
+    // 根据路由, 从url中抽取参数, 空或未匹配到的设置为null
     _extractParameters: function(route, fragment) {
       var params = route.exec(fragment).slice(1);
       return _.map(params, function(param, i) {
@@ -1502,11 +1513,11 @@
   };
 
   // Cached regex for stripping a leading hash/slash and trailing space.
-  // 正则表达式,用于匹配头部的 `#` 或 `/`, 或者匹配尾部的空字符
+  // 正则表达式,用于匹配以 `#` 或 `/` 开头, 或以空字符结尾的字符串
   var routeStripper = /^[#\/]|\s+$/g;
 
   // Cached regex for stripping leading and trailing slashes.
-  // 正则表达式,用于匹配 hash 头尾的斜杠
+  // 正则表达式,用于匹配以一个或多个`/`开头或结尾的字符串
   var rootStripper = /^\/+|\/+$/g;
 
   // Cached regex for detecting MSIE.
@@ -1514,14 +1525,15 @@
   var isExplorer = /msie [\w.]+/;
 
   // Cached regex for removing a trailing slash.
-  // 正则表达式,用于删除 URL 尾部的 `/`
+  // 正则表达式, 匹配字符串尾部的 `/`
   var trailingSlash = /\/$/;
 
   // Cached regex for stripping urls of hash.
-  // 正则表达式,用于分离 URL 中的 hash 部分
+  // 正则表达式, 匹配以#开头的字符串, 用于分离 URL 中的 hash 部分
   var pathStripper = /#.*$/;
 
   // Has the history handling already been started?
+  // 状态符, 用来标识是否开始监控url变化
   History.started = false;
 
   // Set up all inheritable **Backbone.History** properties and methods.
@@ -1540,7 +1552,7 @@
 
     // Gets the true hash value. Cannot use location.hash directly due to bug
     // in Firefox where location.hash will always be decoded.
-    // 获取 hash 的值, 不能直接使用 `location.hash` 是因为 Firefox 总是会
+    // 获取 hash 的值(不包含`#`), 不能直接使用 `location.hash` 是因为 Firefox 总是会
     // 返回编码后的值
     getHash: function(window) {
       var match = (window || this).location.href.match(/#(.*)$/);
@@ -1570,8 +1582,9 @@
 
       // Figure out the initial configuration. Do we need an iframe?
       // Is pushState desired ... is it available?
+      // 计算初始化配置
       this.options          = _.extend({root: '/'}, this.options, options);
-      this.root             = this.options.root;
+      this.root             = this.options.root; // 根路由
       this._wantsHashChange = this.options.hashChange !== false;
       this._wantsPushState  = !!this.options.pushState;
       this._hasPushState    = !!(this.options.pushState && this.history && this.history.pushState);
@@ -1580,6 +1593,7 @@
       var oldIE             = (isExplorer.exec(navigator.userAgent.toLowerCase()) && (!docMode || docMode <= 7));
 
       // Normalize root to always include a leading and trailing slash.
+      // 标准化根路由,使它头尾总有,且只有一个`/`
       this.root = ('/' + this.root + '/').replace(rootStripper, '/');
 
       if (oldIE && this._wantsHashChange) {
@@ -1643,6 +1657,7 @@
 
     // Checks the current URL to see if it has changed, and if it has,
     // calls `loadUrl`, normalizing across the hidden iframe.
+    // 检查当前url是否发生变化, 如果由,调用 `loadUrl`.
     checkUrl: function(e) {
       var current = this.getFragment();
       if (current === this.fragment && this.iframe) {
@@ -1656,6 +1671,8 @@
     // Attempt to load the current URL fragment. If a route succeeds with a
     // match, returns `true`. If no defined routes matches the fragment,
     // returns `false`.
+    // 尝试加载当前 url 片段, 如果能匹配到配置的路由,执行对应 callback,
+    // 并返回true; 否则, 返回true
     loadUrl: function(fragment) {
       fragment = this.fragment = this.getFragment(fragment);
       return _.any(this.handlers, function(handler) {
@@ -1669,23 +1686,30 @@
     // Save a fragment into the hash history, or replace the URL state if the
     // 'replace' option is passed. You are responsible for properly URL-encoding
     // the fragment in advance.
+    // 保存 url片段(路由)到 history, 或者替换 URL 状态, 如果传入了`replace`参数
     //
     // The options object can contain `trigger: true` if you wish to have the
     // route callback be fired (not usually desirable), or `replace: true`, if
     // you wish to modify the current URL without adding an entry to the history.
     navigate: function(fragment, options) {
+      // 如果History没有被标记为 "开始", 直接返回false
       if (!History.started) return false;
+      // 如果options没有传值,或者传值为false,或者值为true, 则
       if (!options || options === true) options = {trigger: !!options};
 
+      // 拼页面的url
       var url = this.root + (fragment = this.getFragment(fragment || ''));
 
       // Strip the hash for matching.
+      // 删除url中的hash部分
       fragment = fragment.replace(pathStripper, '');
 
+      // 如果 hash 没有变化,直接返回
       if (this.fragment === fragment) return;
-      this.fragment = fragment;
+      this.fragment = fragment; // 设置 hash 为最新的 hash
 
       // Don't include a trailing slash on the root.
+      // 删除末尾的'/'
       if (fragment === '' && url !== '/') url = url.slice(0, -1);
 
       // If pushState is available, we use it to set the fragment as a real URL.
